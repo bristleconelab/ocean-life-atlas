@@ -149,6 +149,17 @@ Two things are stored with the site:
 
 Code: MIT (see `LICENSE`).
 
+## Search engines
+
+The globe opens species and places by `#sp=` and `#at=` links, which search engines do not read as pages. So
+`scripts/seo_pages.mjs` writes static pages with the real numbers from OBIS, WoRMS and Wikidata: `/species/<name>/`
+for 133 well-known sea animals (the 109 MiCO species and famous ones such as the clownfish, orca and giant squid; with
+the Uzbek name where Wikidata has one), `/places/<name>/` for 12 seas and reefs, `/about/` (FAQ, citation, Dataset
+JSON-LD for the completeness layer), `sitemap.xml` and `robots.txt`. The home page carries WebApplication and WebSite
+JSON-LD and `<noscript>` links. Regenerate with `node scripts/seo_pages.mjs` (about a minute), commit, and after the
+deploy run `scripts/indexnow.sh`. Google Search Console covers the site through the `bristleconelab.org` domain
+property.
+
 ## Development
 
 ```sh
