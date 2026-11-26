@@ -6,6 +6,7 @@ import { mergeHits, rankHits, type Hit } from './search-merge';
 import { GROUP_LABEL } from './taxa';
 import { commonsThumbs } from './wiki';
 import { silhouette } from './silhouettes';
+import { L } from './i18n';
 
 type Item = { kind: 'taxon'; hit: Hit } | { kind: 'place'; place: api.Place };
 
@@ -43,7 +44,7 @@ export function initSearch(input: HTMLInputElement, list: HTMLUListElement, stat
     ctl?.abort();
     ctl = new AbortController();
     const signal = ctl.signal;
-    status.textContent = 'Searching…';
+    status.textContent = L('Searching…', 'Qidirilmoqda…');
     const val = <T,>(r: PromiseSettledResult<T[]>) => (r.status === 'fulfilled' ? r.value : []);
     const latin = q.length >= 3 && !/[^\u0000-ɏ]/.test(q); // WoRMS names are Latin-script
     const none = Promise.resolve([] as never[]);
@@ -74,13 +75,13 @@ export function initSearch(input: HTMLInputElement, list: HTMLUListElement, stat
     cursor = -1;
     if (!items.length) {
       status.textContent = failed
-        ? 'Search is not answering right now. Check the connection and try again.'
-        : `Nothing called "${q}" in the sea records or the gazetteer. Try another name, or the scientific name.`;
+        ? L('Search is not answering right now. Check the connection and try again.', 'Qidiruv hozir javob bermayapti. Internetni tekshirib, qayta urinib koʻring.')
+        : L(`Nothing called "${q}" in the sea records or the gazetteer. Try another name, or the scientific name.`, `Dengiz yozuvlarida yoki joy nomlarida "${q}" topilmadi. Boshqa nom yoki ilmiy nomni sinab koʻring.`);
       list.append(h('li', { class: 'empty', text: status.textContent }));
-    } else status.textContent = `${items.length} results`;
+    } else status.textContent = L(`${items.length} results`, `${items.length} ta natija`);
     items.forEach((it, i) => {
-      if (it.kind === 'place' && (i === 0 || items[i - 1].kind !== 'place')) list.append(h('li', { class: 'hits-head', text: 'Places', attrs: { role: 'presentation' } }));
-      if (it.kind === 'taxon' && pl.length && (i === 0 || items[i - 1].kind !== 'taxon')) list.append(h('li', { class: 'hits-head', text: 'Sea life', attrs: { role: 'presentation' } }));
+      if (it.kind === 'place' && (i === 0 || items[i - 1].kind !== 'place')) list.append(h('li', { class: 'hits-head', text: L('Places', 'Joylar'), attrs: { role: 'presentation' } }));
+      if (it.kind === 'taxon' && pl.length && (i === 0 || items[i - 1].kind !== 'taxon')) list.append(h('li', { class: 'hits-head', text: L('Sea life', 'Dengiz hayoti'), attrs: { role: 'presentation' } }));
       const li = it.kind === 'taxon' ? taxonRow(it.hit) : placeRow(it.place);
       if (it.kind === 'taxon') li.dataset.taxon = String(it.hit.id);
       li.id = `hit-${i}`;
@@ -133,7 +134,7 @@ function taxonRow(hit: Hit): HTMLLIElement {
   const latin = h('span', { class: 'latin', text: '' });
   const thumb = h('span', { class: `hit-thumb g-${hit.group}` }, silhouette(hit.group));
   return h('li', {}, thumb, h('span', { class: 'hit-text' }, name, latin,
-    h('span', { class: 'hit-group', text: hit.rank === 'Species' ? GROUP_LABEL[hit.group] : `${hit.rank}, ${GROUP_LABEL[hit.group].toLowerCase()}` })));
+    h('span', { class: 'hit-group', text: hit.rank === 'Species' ? GROUP_LABEL[hit.group] : `${L(hit.rank, hit.rank === 'Genus' ? 'Urugʻ' : 'Oila')}, ${GROUP_LABEL[hit.group].toLowerCase()}` })));
 }
 
 function placeRow(p: api.Place): HTMLLIElement {
@@ -146,7 +147,10 @@ function placeRow(p: api.Place): HTMLLIElement {
   path.setAttribute('d', PIN);
   path.setAttribute('fill-rule', 'evenodd');
   svg.append(path);
-  const type = p.type === 'Marine Ecoregion of the World (MEOW)' ? 'Marine ecoregion' : p.type === 'IHO Sea Area' ? 'Sea area' : p.type;
+  const UZ: Record<string, string> = { Sea: 'Dengiz', Ocean: 'Okean', Lake: 'Koʻl', Gulf: 'Qoʻltiq', Bay: 'Koʻrfaz', Strait: 'Boʻgʻoz', Island: 'Orol',
+    'Island Group': 'Orollar guruhi', Archipelago: 'Arxipelag', Atoll: 'Atoll', Reef: 'Rif', Lagoon: 'Laguna', Fjord: 'Fyord', Estuary: 'Estuariy',
+    Sound: 'Boʻgʻoz', Channel: 'Kanal', Bight: 'Qoʻltiq', Nation: 'Davlat' };
+  const type = p.type === 'Marine Ecoregion of the World (MEOW)' ? L('Marine ecoregion', 'Dengiz ekoregioni') : p.type === 'IHO Sea Area' ? L('Sea area', 'Dengiz hududi') : L(p.type, UZ[p.type] ?? p.type);
   return h('li', { class: 'place-hit' }, h('span', { class: 'hit-thumb place' }, svg),
     h('span', { class: 'hit-text' }, h('span', { class: 'hit-name', text: p.name }), h('span', { class: 'hit-group', text: type })));
 }

@@ -42,3 +42,11 @@ export function loadPhoto(frame: HTMLElement, urls: string[], alt: string, eager
   frame.append(img);
   return img;
 }
+
+/** Hand the reader a file made in the browser. */
+export function download(name: string, text: string, type: string) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}

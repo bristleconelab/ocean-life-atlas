@@ -1,4 +1,5 @@
 // Turning OBIS taxonomy into groups a non-specialist recognises, plus small summaries. Pure (test/taxa.test.ts).
+import { BANDS_UZ, IUCN_UZ, groupLabelUz, lang } from './i18n';
 
 export interface Taxon {
   taxonID: number;
@@ -39,7 +40,7 @@ export const GROUPS: { id: GroupId; label: string }[] = [
   { id: 'plankton', label: 'Plankton and single cells' },
   { id: 'other', label: 'Sponges, worms and others' },
 ];
-export const GROUP_LABEL: Record<GroupId, string> = Object.fromEntries(GROUPS.map((g) => [g.id, g.label])) as Record<GroupId, string>;
+export const GROUP_LABEL: Record<GroupId, string> = Object.fromEntries(GROUPS.map((g) => [g.id, lang === 'uz' ? groupLabelUz(g.id) : g.label])) as Record<GroupId, string>;
 
 const FISH_CLASSES = new Set(['Actinopteri', 'Actinopterygii', 'Teleostei', 'Myxini', 'Petromyzonti', 'Sarcopterygii', 'Coelacanthi']);
 /** Brown seaweeds sit in Chromista with the diatoms; they are seaweed to a reader. */
@@ -82,7 +83,7 @@ export function isShowable(t: Taxon): boolean {
   return !isLandOrFreshwaterOnly(t);
 }
 
-export const IUCN_LABEL: Record<string, string> = {
+export const IUCN_LABEL: Record<string, string> = lang === 'uz' ? IUCN_UZ : {
   EX: 'Extinct', EW: 'Extinct in the wild', CR: 'Critically endangered', EN: 'Endangered', VU: 'Vulnerable',
   NT: 'Near threatened', LC: 'Least concern', DD: 'Data deficient',
 };
@@ -171,7 +172,7 @@ export const DEPTH_BANDS: { from: number; to: number; label: string }[] = [
   { from: 200, to: 1000, label: '200–1,000 m, twilight zone' },
   { from: 1000, to: 4000, label: '1–4 km, midnight zone' },
   { from: 4000, to: Infinity, label: 'Below 4 km, abyss' },
-];
+].map((b, i) => (lang === 'uz' ? { ...b, label: BANDS_UZ[i] } : b));
 export function depthBands(bins: Bin[]): number[] {
   const out = DEPTH_BANDS.map(() => 0);
   for (const b of splitDepth(bins).below) {

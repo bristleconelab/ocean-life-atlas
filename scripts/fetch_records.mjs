@@ -22,18 +22,29 @@ function geohash(lon, lat, precision) {
   return out;
 }
 
-const res = await fetch(URL, { headers: { 'User-Agent': 'ocean-life-atlas data build' } });
-if (!res.ok) throw new Error(`OBIS grid: HTTP ${res.status}`);
-const fc = await res.json();
-
-const cells = new Map();
-for (const f of fc.features) {
-  const ring = f.geometry.coordinates[0];
-  const xs = ring.map((p) => p[0]), ys = ring.map((p) => p[1]);
-  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-  const id = geohash(cx, cy, 3);
-  cells.set(id, (cells.get(id) ?? 0) + f.properties.n);
+async function grid(extra = '') {
+  const res = await fetch(URL + extra, { headers: { 'User-Agent': 'ocean-life-atlas data build' } });
+  if (!res.ok) throw new Error(`OBIS grid${extra}: HTTP ${res.status}`);
+  const fc = await res.json();
+  const cells = new Map();
+  for (const f of fc.features) {
+    const ring = f.geometry.coordinates[0];
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const [x, y] of ring) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const id = geohash((x0 + x1) / 2, (y0 + y1) / 2, 3);
+    cells.set(id, (cells.get(id) ?? 0) + f.properties.n);
+  }
+  return cells;
 }
+
+const cells = await grid();
+// "Last surveyed": the most recent period with any record in the cell. Each period is one more grid request.
+const YEAR = new Date().getUTCFullYear();
+const PERIODS = [YEAR - 10, YEAR - 20, YEAR - 50]; // since: 2016, 2006, 1976 when built in 2026
+const recent = [];
+for (const y of PERIODS) recent.push(await grid(`&startdate=${y}-01-01`));
+/** 0: recorded in the last 10 years, 1: 10-20 years ago at the latest, 2: 20-50, 3: only longer ago (or undated) */
+const ageOf = (id) => { const i = recent.findIndex((m) => m.has(id)); return i < 0 ? 3 : i; };
 
 const ids = [...cells.keys()].sort();
 const out = {
@@ -44,8 +55,11 @@ const out = {
   total: ids.reduce((s, id) => s + cells.get(id), 0),
   gh: ids.join(''),
   n: ids.map((id) => cells.get(id)),
+  agePeriods: PERIODS.map((y) => `since ${y}`).concat('older or undated'),
+  age: ids.map(ageOf).join(''),
 };
 if (ids.length < 18000) throw new Error(`only ${ids.length} cells, expected about 21,700`);
 mkdirSync('public/data', { recursive: true });
 writeFileSync('public/data/records-gh3.json', JSON.stringify(out));
-console.log(`${ids.length} cells, ${out.total.toLocaleString('en-US')} records -> public/data/records-gh3.json`);
+const by = [0, 1, 2, 3].map((k) => [...out.age].filter((c) => +c === k).length);
+console.log(`${ids.length} cells, ${out.total.toLocaleString('en-US')} records, last surveyed ${by.join('/')} -> public/data/records-gh3.json`);

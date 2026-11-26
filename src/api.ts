@@ -90,6 +90,10 @@ export async function obisTaxon(id: number): Promise<Taxon | null> {
 export async function obisRange(id: number, signal?: AbortSignal, precision = 3): Promise<GeoJSON.FeatureCollection<GeoJSON.Polygon, { n: number }>> {
   return getJSON(`${OBIS}/occurrence/grid/${precision}?${q({ taxonid: id, exclude: SEA_ONLY })}`, { signal, timeoutMs: 40000 });
 }
+/** Range in one period only, for "then and now". */
+export async function obisRangePeriod(id: number, period: { startdate?: string; enddate?: string }, signal?: AbortSignal): Promise<GeoJSON.FeatureCollection<GeoJSON.Polygon, { n: number }>> {
+  return getJSON(`${OBIS}/occurrence/grid/3?${q({ taxonid: id, exclude: SEA_ONLY, ...period })}`, { signal, timeoutMs: 40000 });
+}
 export interface EnvStats { depth: Bin[]; sst: { sst: number; records: number }[] }
 export function obisEnv(id: number): Promise<EnvStats> {
   return getJSON(`${OBIS}/statistics/env?${q({ taxonid: id })}`);
@@ -194,7 +198,9 @@ export async function wormsEnglishName(id: number): Promise<string | null> {
 }
 
 // ---------- Wikidata / Commons / Wikipedia ----------
+/** Language for names and Wikipedia: the interface language when the reader chose one, else the browser's. */
 export function readerLanguage(): string {
+  try { const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('lang') : null; if (saved === 'en' || saved === 'uz') return saved; } catch { /* blocked */ }
   const l = (typeof navigator !== 'undefined' ? navigator.language : 'en').toLowerCase().split('-')[0];
   return /^[a-z]{2,3}$/.test(l) ? l : 'en';
 }
@@ -278,6 +284,25 @@ export async function wikidataSearchAphia(text: string, lang = readerLanguage(),
   const b = await sparql(`${PREFIXES}SELECT ?item ?aphia WHERE { VALUES ?item { ${qids.map((x) => `wd:${x}`).join(' ')} } ?item wdt:P850 ?aphia . }`, signal);
   const byQ = new Map((b ?? []).map((x) => [x.item.value.split('/').pop()!, Number(x.aphia.value)]));
   return qids.map((x) => byQ.get(x)).filter((n): n is number => Number.isInteger(n));
+}
+
+/** A sound recording (P51) and body size and lifespan quantities (P2067 mass, P2043 length, P2250 life expectancy)
+ *  for one taxon, following an old name to the accepted taxon like the photo query does. */
+export async function wikidataExtras(id: number, signal?: AbortSignal): Promise<{ audio?: string; rows: Record<string, { value: string }>[] }> {
+  const query = `${PREFIXES}PREFIX p: <http://www.wikidata.org/prop/>
+PREFIX psv: <http://www.wikidata.org/prop/statement/value/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+SELECT ?audio ?massAmt ?massUnit ?lenAmt ?lenUnit ?lifeAmt ?lifeUnit WHERE {
+  ?item0 wdt:P850 "${Math.trunc(id)}" . OPTIONAL { ?item0 wdt:P12765 ?acc } BIND(COALESCE(?acc, ?item0) AS ?item)
+  { ?item wdt:P51 ?audio } UNION
+  { ?item p:P2067/psv:P2067 [ wikibase:quantityAmount ?massAmt ; wikibase:quantityUnit ?massUnit ] } UNION
+  { ?item p:P2043/psv:P2043 [ wikibase:quantityAmount ?lenAmt ; wikibase:quantityUnit ?lenUnit ] } UNION
+  { ?item p:P2250/psv:P2250 [ wikibase:quantityAmount ?lifeAmt ; wikibase:quantityUnit ?lifeUnit ] }
+} LIMIT 60`;
+  const b = (await sparql(query, signal)) ?? [];
+  const audioUrl = b.find((x) => x.audio)?.audio?.value;
+  const audio = audioUrl ? /Special:FilePath\/(.+)$/.exec(audioUrl)?.[1] : undefined;
+  return { audio: audio ? decodeURIComponent(audio).replace(/_/g, ' ') : undefined, rows: b };
 }
 
 export interface Credit { artist: string; licence: string; page: string }

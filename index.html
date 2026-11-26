@@ -20,66 +20,106 @@
   <header class="topbar">
     <h1 class="brand">Ocean Life Atlas</h1>
     <div class="search" role="search">
-      <label for="search" class="visually-hidden">Find a sea animal or a place</label>
+      <label for="search" class="visually-hidden" data-uz="Dengiz hayvoni yoki joy qidirish">Find a sea animal or a place</label>
       <input id="search" type="search" autocomplete="off" spellcheck="false" placeholder="Search sea life or a place"
+        data-placeholder="Search sea life or a place" data-uz-placeholder="Dengiz hayoti yoki joy qidirish"
         role="combobox" aria-expanded="false" aria-controls="hits" aria-autocomplete="list">
       <ul id="hits" role="listbox" hidden></ul>
       <p id="search-status" class="visually-hidden" aria-live="polite"></p>
     </div>
   </header>
 
-  <p id="hint">Click anywhere in the sea to see what lives there</p>
+  <div class="lang-switch" role="group" aria-label="Language / Til">
+    <button data-lang="en" lang="en">EN</button><button data-lang="uz" lang="uz">UZ</button>
+  </div>
+
+  <p id="hint" data-uz="Unda nima yashashini koʻrish uchun dengizning istalgan joyini bosing">Click anywhere in the sea to see what lives there</p>
+
+  <section id="tour" class="tour" hidden aria-live="polite"></section>
 
   <div class="corner">
-    <div id="legend" hidden>
-      <p class="legend-title">Records per 10,000 km²</p>
-      <div class="ramp" aria-hidden="true"></div>
-      <div class="ramp-ticks" aria-hidden="true"><span>1</span><span>30</span><span>1,000</span><span>30,000</span><span>1 million</span></div>
-      <p id="legend-note" class="fine">Loading…</p>
+    <div id="legend" hidden data-mode="records">
+      <div class="mode" role="group" aria-label="Colour the squares by" data-uz-label="Kvadratlarni boʻyash">
+        <button data-mode="records" aria-pressed="true" data-uz="Yozuvlar soni">How many records</button>
+        <button data-mode="age" aria-pressed="false" data-uz="Oxirgi kuzatuv">Last looked at</button>
+      </div>
+      <div class="legend-records">
+        <p class="legend-title" data-uz="10 000 km² ga yozuvlar">Records per 10,000 km²</p>
+        <div class="ramp" aria-hidden="true"></div>
+        <div class="ramp-ticks" aria-hidden="true"><span>1</span><span>30</span><span>1,000</span><span>30,000</span><span>1M</span></div>
+      </div>
+      <ul class="legend-age">
+        <li><span class="swatch" style="background:#5fc0b0"></span><span data-uz="oxirgi 10 yil ichida">within 10 years</span></li>
+        <li><span class="swatch" style="background:#f2c94c"></span><span data-uz="10–20 yil oldin">10 to 20 years ago</span></li>
+        <li><span class="swatch" style="background:#e07a5f"></span><span data-uz="20–50 yil oldin">20 to 50 years ago</span></li>
+        <li><span class="swatch" style="background:#8e4fa0"></span><span data-uz="50 yildan oldin yoki sanasiz">over 50 years, or undated</span></li>
+      </ul>
+      <p id="legend-note" class="fine" data-uz="Yuklanmoqda…">Loading…</p>
     </div>
     <div class="corner-buttons">
-      <button id="looked" class="btn" aria-pressed="false">Where scientists have looked</button>
-      <button id="near-me" class="btn ghost">Near me</button>
-      <button id="migrations-open" class="btn ghost">Migrations</button>
-      <button id="about-open" class="btn ghost">About</button>
+      <button id="looked" class="btn" aria-pressed="false" data-uz="Olimlar qayerni oʻrgangan">Where scientists have looked</button>
+      <button id="tour-open" class="btn ghost" data-uz="Sayohat">Tour</button>
+      <button id="near-me" class="btn ghost" data-uz="Yonimda">Near me</button>
+      <button id="migrations-open" class="btn ghost" data-uz="Migratsiyalar">Migrations</button>
+      <button id="about-open" class="btn ghost" data-uz="Haqida">About</button>
     </div>
   </div>
 
   <aside id="panel" hidden aria-live="polite">
-    <button class="sheet-handle" aria-label="Resize the panel" role="slider" aria-valuemin="30" aria-valuemax="92" aria-valuenow="58" aria-orientation="vertical"></button>
-    <button class="panel-close" aria-label="Close panel">×</button>
+    <button class="sheet-handle" aria-label="Resize the panel" data-uz-label="Panel balandligini oʻzgartirish" role="slider" aria-valuemin="30" aria-valuemax="92" aria-valuenow="58" aria-orientation="vertical"></button>
+    <button class="panel-close" aria-label="Close panel" data-uz-label="Panelni yopish">×</button>
     <div class="panel-body"></div>
   </aside>
 
   <dialog id="migrations" aria-labelledby="migrations-title">
     <div class="mig-head">
-      <button class="about-close" aria-label="Close">×</button>
-      <h2 id="migrations-title">Follow a migration</h2>
-      <p>109 sea animals whose journeys have been pieced together from tracking and tagging studies (MiCO, Bentley et al. 2025). Pick one to see where it gathers, the links between those places, and the tagged animals in OBIS.</p>
-      <label for="mig-filter" class="visually-hidden">Filter the animals</label>
-      <input id="mig-filter" type="search" autocomplete="off" placeholder="Filter: turtle, albatross, Balaenoptera…">
+      <button class="about-close" aria-label="Close" data-uz-label="Yopish">×</button>
+      <h2 id="migrations-title" data-uz="Migratsiyani kuzating">Follow a migration</h2>
+      <p data-uz="Yoʻllari kuzatuv va belgilash tadqiqotlaridan yigʻilgan 109 ta dengiz hayvoni (MiCO, Bentley va boshq. 2025). Qayerda toʻplanishi, joylar orasidagi bogʻlanishlar va OBIS dagi belgilangan hayvonlarni koʻrish uchun bittasini tanlang.">109 sea animals whose journeys have been pieced together from tracking and tagging studies (MiCO, Bentley et al. 2025). Pick one to see where it gathers, the links between those places, and the tagged animals in OBIS.</p>
+      <label for="mig-filter" class="visually-hidden" data-uz="Hayvonlarni saralash">Filter the animals</label>
+      <input id="mig-filter" type="search" autocomplete="off" placeholder="Filter: turtle, albatross, Balaenoptera…" data-uz-placeholder="Saralash: turtle, albatross, Balaenoptera…">
     </div>
     <div class="mig-list"></div>
   </dialog>
 
   <dialog id="about" aria-labelledby="about-title">
-    <button class="about-close" aria-label="Close">×</button>
+    <button class="about-close" aria-label="Close" data-uz-label="Yopish">×</button>
+    <div data-l="en">
     <h2 id="about-title">About this atlas</h2>
     <p>Ocean Life Atlas shows what people have recorded living in the sea. Click a spot to see the species found within a square about 150 km across, or search for an animal or a sea to see where it has been seen, how deep it lives and how it migrates.</p>
-    <p>A list here is a record of what was found, not a census. Most of the ocean has hardly been sampled, so a short list usually means few people looked, not that little lives there. Switch on <em>Where scientists have looked</em> to see the gaps. Records OBIS flags as lying on land (a museum specimen filed under a city, a river record) are left out everywhere, and so are species that live only on land or in fresh water.</p>
+    <p>A list here is a record of what was found, not a census. Most of the ocean has hardly been sampled, so a short list usually means few people looked, not that little lives there. Switch on <em>Where scientists have looked</em> to see the gaps, and how long ago each square was last looked at. Records OBIS flags as lying on land (a museum specimen filed under a city, a river record) are left out everywhere, and so are species that live only on land or in fresh water.</p>
     <h3>Where the data comes from</h3>
     <ul class="sources">
       <li>Species records, ranges and depths: <a href="https://obis.org">OBIS</a>, the Ocean Biodiversity Information System (each dataset keeps its own licence, mostly CC BY or CC0).</li>
       <li>Names and search: <a href="https://www.marinespecies.org">World Register of Marine Species</a> (CC BY 4.0).</li>
-      <li>Photos: <a href="https://commons.wikimedia.org">Wikimedia Commons</a>, credited on each photo; common names and links: <a href="https://www.wikidata.org">Wikidata</a> (CC0), queried through <a href="https://qlever.dev">QLever</a>.</li>
-      <li>Summaries: <a href="https://en.wikipedia.org">Wikipedia</a> (CC BY-SA 4.0). Sea names: <a href="https://www.marineregions.org">Marine Regions</a> (CC BY 4.0).</li>
-      <li>Globe imagery: NASA Blue Marble through <a href="https://earthdata.nasa.gov/gibs">GIBS</a> (public domain). Borders and place names: <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL), tiles by <a href="https://openfreemap.org">OpenFreeMap</a>. Place search: Marine Regions gazetteer.</li>
+      <li>Photos, sounds, body size and lifespan: <a href="https://commons.wikimedia.org">Wikimedia Commons</a>, credited on each file; common names and links: <a href="https://www.wikidata.org">Wikidata</a> (CC0), queried through <a href="https://qlever.dev">QLever</a>.</li>
+      <li>Summaries: <a href="https://www.wikipedia.org">Wikipedia</a> (CC BY-SA 4.0). Sea names and place search: <a href="https://www.marineregions.org">Marine Regions</a> (CC BY 4.0).</li>
+      <li>Globe imagery: NASA Blue Marble through <a href="https://earthdata.nasa.gov/gibs">GIBS</a> (public domain); close up, <a href="https://s2maps.eu">Sentinel-2 cloudless 2016</a> by EOX (CC BY 4.0, contains modified Copernicus Sentinel data 2016). Borders and place names: <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL), tiles by <a href="https://openfreemap.org">OpenFreeMap</a>.</li>
       <li>Red List status: IUCN categories as provided by OBIS.</li>
       <li>Migration networks: <a href="https://doi.org/10.1038/s41467-025-59271-7">MiCO</a>, Bentley et al. (2025) Nature Communications, data <a href="https://doi.org/10.5281/zenodo.14873514">Zenodo</a> (CC0). Tagged-animal tracks: OBIS telemetry records (satellite and acoustic tags), credited per study on each species page.</li>
     </ul>
     <h3>Privacy</h3>
-    <p>This site has no server of its own, no cookies and no analytics. Your browser loads the data straight from the services above (OBIS, WoRMS, Wikidata and QLever, Wikimedia Commons, Wikipedia, Marine Regions, NASA GIBS and OpenFreeMap), so each of them sees your IP address and what you look up, as with any website. <em>Near me</em> uses your location only in your browser: what is sent to OBIS is the outline of the square, as for any click.</p>
-    <p>Code: <a href="https://github.com/bristleconelab/ocean-life-atlas">github.com/bristleconelab/ocean-life-atlas</a> (MIT). Sister project: <a href="https://seaflooratlas.org">Seafloor Atlas</a>.</p>
+    <p>This site has no server of its own, no cookies and no analytics; it remembers only your language choice, in your browser. Your browser loads the data straight from the services above (OBIS, WoRMS, Wikidata and QLever, Wikimedia Commons, Wikipedia, Marine Regions, NASA GIBS, EOX and OpenFreeMap), so each of them sees your IP address and what you look up, as with any website. <em>Near me</em> uses your location only in your browser: what is sent to OBIS is the outline of the square, as for any click.</p>
+    <p>Code: <a href="https://github.com/bristleconelab/ocean-life-atlas">github.com/bristleconelab/ocean-life-atlas</a> (MIT). Sister projects: <a href="https://seaflooratlas.org">Seafloor Atlas</a>, <a href="https://fauna.bristleconelab.org">Fauna Atlas</a> (animals on land, in rivers and at sea).</p>
+    </div>
+    <div data-l="uz" lang="uz">
+    <h2>Atlas haqida</h2>
+    <p>Ocean Life Atlas odamlar dengizda qayd etgan hayotni koʻrsatadi. Taxminan 150 km lik kvadratda topilgan turlarni koʻrish uchun biror joyni bosing yoki hayvon yoki dengizni qidirib, u qayerda koʻrilgani, qanchalik chuqurda yashashi va qanday migratsiya qilishini biling.</p>
+    <p>Bu yerdagi roʻyxat sanoq emas, topilgan narsalar yozuvi. Okeanning katta qismi deyarli oʻrganilmagan, shuning uchun qisqa roʻyxat odatda kam hayotni emas, kam odam qaraganini bildiradi. Boʻshliqlarni va har bir kvadratga oxirgi marta qachon qaralganini koʻrish uchun <em>Olimlar qayerni oʻrgangan</em> qatlamini yoqing. OBIS quruqlikda deb belgilagan yozuvlar (shahar nomi bilan saqlangan muzey namunasi, daryo yozuvi) va faqat quruqlikda yoki chuchuk suvda yashaydigan turlar hamma joyda chiqarib tashlangan.</p>
+    <h3>Maʼlumotlar manbasi</h3>
+    <ul class="sources">
+      <li>Tur yozuvlari, tarqalish va chuqurlik: <a href="https://obis.org">OBIS</a> (har bir toʻplam oʻz litsenziyasida, asosan CC BY yoki CC0).</li>
+      <li>Nomlar va qidiruv: <a href="https://www.marinespecies.org">WoRMS</a> (CC BY 4.0).</li>
+      <li>Suratlar, ovozlar, oʻlcham va umr: <a href="https://commons.wikimedia.org">Wikimedia Commons</a>, har bir faylda muallifi bilan; nomlar va havolalar: <a href="https://www.wikidata.org">Wikidata</a> (CC0), <a href="https://qlever.dev">QLever</a> orqali.</li>
+      <li>Qisqa maʼlumot: <a href="https://www.wikipedia.org">Wikipedia</a> (CC BY-SA 4.0). Dengiz nomlari va joy qidiruvi: <a href="https://www.marineregions.org">Marine Regions</a> (CC BY 4.0).</li>
+      <li>Globus tasviri: NASA Blue Marble, <a href="https://earthdata.nasa.gov/gibs">GIBS</a> orqali; yaqindan — EOX ning <a href="https://s2maps.eu">Sentinel-2 cloudless 2016</a> (CC BY 4.0). Chegaralar va joy nomlari: <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> (ODbL), <a href="https://openfreemap.org">OpenFreeMap</a> orqali.</li>
+      <li>Qizil kitob holati: OBIS bergan IUCN toifalari.</li>
+      <li>Migratsiya tarmoqlari: <a href="https://doi.org/10.1038/s41467-025-59271-7">MiCO</a>, Bentley va boshq. (2025), maʼlumot <a href="https://doi.org/10.5281/zenodo.14873514">Zenodo</a> (CC0). Belgilangan hayvonlar yoʻllari: OBIS telemetriya yozuvlari, har bir tur sahifasida tadqiqot nomi bilan.</li>
+    </ul>
+    <h3>Maxfiylik</h3>
+    <p>Saytning oʻz serveri, cookie va analitikasi yoʻq; brauzeringizda faqat tanlagan tilingiz saqlanadi. Maʼlumotlar yuqoridagi xizmatlardan toʻgʻridan-toʻgʻri brauzeringizga yuklanadi, shuning uchun ularning har biri har qanday saytdagi kabi IP manzilingiz va nimani qidirayotganingizni koʻradi. <em>Yonimda</em> joylashuvingizdan faqat brauzerda foydalanadi: OBIS ga, har qanday bosishdagidek, faqat kvadrat chegarasi yuboriladi.</p>
+    <p>Kod: <a href="https://github.com/bristleconelab/ocean-life-atlas">github.com/bristleconelab/ocean-life-atlas</a> (MIT). Qardosh loyihalar: <a href="https://seaflooratlas.org">Seafloor Atlas</a>, <a href="https://fauna.bristleconelab.org">Fauna Atlas</a> (quruqlik, daryo va dengizdagi hayvonlar).</p>
+    </div>
   </dialog>
 
   <script type="module" src="/src/main.ts"></script>

@@ -286,3 +286,62 @@ p.latin.big { margin: 4px 0 0; font-size: 18px; color: var(--muted); }
 #migrations .mig-list { overflow-y: auto; padding: 6px 16px 18px; margin: 0; display: block; overscroll-behavior: contain; }
 .mig-group h3 { margin: 14px 10px 4px; font-size: 15px; color: var(--muted); font-weight: 600; }
 .mig-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+
+/* ---------- v0.4: language, tour, survey, body, tools, compare, legend modes ---------- */
+html[lang='uz'] [data-l='en'], html:not([lang='uz']) [data-l='uz'] { display: none; }
+.lang-switch { position: fixed; top: 16px; right: 16px; z-index: 5; display: flex; border-radius: 16px; overflow: hidden; background: rgb(11 34 51 / 0.7); }
+.lang-switch button { border: 0; background: none; color: var(--foam); font-size: 13px; font-weight: 600; padding: 6px 11px; }
+.lang-switch button[aria-pressed='true'] { background: var(--foam); color: var(--ink); }
+body.panel-open .lang-switch { right: 472px; }
+
+.tour { position: fixed; left: 16px; top: 150px; z-index: 6; width: min(360px, calc(100vw - 32px)); padding: 18px 20px 14px; border-radius: var(--r-panel);
+  background: var(--foam); color: var(--ink); box-shadow: 0 16px 40px rgb(4 20 30 / 0.45); }
+.tour .about-close { top: 10px; right: 10px; }
+.tour-count { font-size: 12px; color: var(--muted); }
+.tour-title { margin: 2px 32px 6px 0; font-size: 21px; line-height: 1.15; letter-spacing: -0.015em; text-wrap: balance; }
+.tour-text { margin: 0 0 12px; font-size: 14.5px; }
+
+.survey { margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: #e8f1ef; }
+.survey p { margin: 6px 0 0; }
+.survey p:first-child { margin-top: 0; }
+.meter { height: 8px; border-radius: 4px; background: #c9dbd8; overflow: hidden; }
+.meter span { display: block; height: 100%; width: var(--w); background: #2f8f82; border-radius: 4px; }
+
+.body-box, .tools { margin: 18px 0 0; }
+.body-box h3 { margin: 0 0 6px; font-size: 18px; letter-spacing: -0.01em; }
+.body-box > p { margin: 0 0 8px; }
+.scale { display: grid; gap: 5px; margin: 6px 0 12px; }
+.scale-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.scale-bar { display: block; height: 10px; width: var(--w); min-width: 3px; border-radius: 5px; flex: none; max-width: 70%; }
+.scale-bar.animal { background: var(--deep); }
+.scale-bar.human { background: #b9cfd2; }
+.listen audio { width: 100%; height: 36px; }
+.cite { word-break: break-word; }
+.shift-out .legend-dots { margin-top: 2px; }
+
+.compare { display: grid; grid-template-columns: 92px 1fr 1fr; gap: 6px 10px; margin: 12px 0; font-size: 14px; align-items: start; }
+.compare .ck { color: var(--muted); font-size: 13px; }
+.cmp-head { all: unset; cursor: pointer; display: grid; gap: 2px; border-radius: var(--r-tile); }
+.cmp-head:focus-visible { outline: 3px solid var(--plankton); outline-offset: 2px; }
+.cmp-head .tile-photo { margin-bottom: 4px; }
+.cmp-head.a .tile-photo { box-shadow: inset 0 -4px 0 #f2c94c; }
+.cmp-head.b .tile-photo { box-shadow: inset 0 -4px 0 #8ecbff; }
+.cmp-head .latin { font-size: 13px; color: var(--muted); }
+
+#legend .mode { display: flex; gap: 4px; margin: 0 0 10px; }
+#legend .mode button { border: 0; border-radius: 12px; padding: 4px 10px; font-size: 12.5px; background: rgb(255 255 255 / 0.1); color: var(--foam); }
+#legend .mode button[aria-pressed='true'] { background: var(--foam); color: var(--ink); }
+#legend[data-mode='records'] .legend-age, #legend[data-mode='age'] .legend-records { display: none; }
+.legend-age { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; }
+.legend-age li { display: flex; align-items: center; gap: 8px; }
+.swatch { width: 14px; height: 10px; border-radius: 3px; flex: none; }
+
+@media (max-width: 759px) {
+  .lang-switch { top: 12px; right: 12px; }
+  body.panel-open .lang-switch { display: none; }
+  .tour { top: auto; bottom: 120px; left: 12px; }
+  body.panel-open .tour { bottom: calc(58vh + 10px); }
+  .compare { grid-template-columns: 72px 1fr 1fr; }
+}
+/* five corner buttons now reach the middle of the screen: the hint sits above them */
+#hint { bottom: 84px; }

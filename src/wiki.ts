@@ -69,3 +69,12 @@ export function parseWikidata(bindings: Record<string, { value: string } | undef
   }
   return out;
 }
+
+/** Playable URLs for a Commons sound file: an MP3 transcode first (Safari cannot play Ogg), then the original. */
+export function commonsAudio(file: string): { src: string; type: string }[] {
+  const name = file.replace(/ /g, '_').replace(/^./, (c) => c.toUpperCase());
+  const hash = md5(name);
+  const original = { src: `https://upload.wikimedia.org/wikipedia/commons/${hash[0]}/${hash.slice(0, 2)}/${encodeURIComponent(name)}`, type: /\.mp3$/i.test(name) ? 'audio/mpeg' : /\.wav$/i.test(name) ? 'audio/wav' : /\.flac$/i.test(name) ? 'audio/flac' : 'audio/ogg' };
+  if (/\.mp3$/i.test(name)) return [original];
+  return [{ src: `https://upload.wikimedia.org/wikipedia/commons/transcoded/${hash[0]}/${hash.slice(0, 2)}/${encodeURIComponent(name)}/${encodeURIComponent(name)}.mp3`, type: 'audio/mpeg' }, original];
+}

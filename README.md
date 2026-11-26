@@ -20,8 +20,19 @@
 - **When it is recorded**: records by month, north and south of the equator apart (their seasons are opposite), with a
   tagged animal counted once a day; and records by decade.
 - **Migrations** lists the 109 species with a mapped migration network, by kind of animal, with a filter.
-- The globe has country borders and sea names (OpenStreetMap), and every place and species is a step in the browser
-  history, so Back works as expected.
+- The globe has country borders and sea names (OpenStreetMap), Sentinel-2 imagery when you zoom in close, and every
+  place and species is a step in the browser history, so Back works as expected.
+- **How well is this water known?** Each square gets a Chao1 inventory-completeness estimate (how many more species more
+  looking would probably turn up) and the years of its first and last record; *Where scientists have looked* can colour
+  the squares by records per area or by how long ago anyone last recorded anything there.
+- **Size and voice**: body length, weight and lifespan from Wikidata, drawn against a person, and a sound recording from
+  Wikimedia Commons where one exists (humpback song, leatherback hatchlings).
+- **Then and now**: a species' squares before 1990 and since 2010 on one map, with the change in average distance from
+  the equator (and a plain warning that the surveys moved too).
+- **Side by side**: compare two species (records, usual depth, surface temperature, Red List, where their ranges meet).
+- **Take it with you**: the species list of a square as CSV, a range as GeoJSON, and a ready citation.
+- **Tour**: seven stops, from the most-studied coasts to water nobody has looked at in fifty years.
+- Interface in English and Uzbek (EN / UZ switch; animal names and Wikipedia follow the chosen language).
 - Species without a photo get a drawn silhouette of their kind instead of a blank tile.
 - Switch on **Where scientists have looked** to see how unevenly the ocean has been sampled. A short species list
   usually means few people have looked, not that little lives there, and the atlas says so.
@@ -69,7 +80,11 @@ it.
 | Tracks of tagged animals | OBIS occurrence rows with `basisOfRecord` = MachineObservation and an `organismID` (satellite and acoustic tags, e.g. the US Animal Telemetry Network and IMOS). The API ignores a basis-of-record filter, so a 5,000-row sample finds the tracking studies; then whole studies are paged in (up to 40,000 rows, 40 studies) and studies that do not fit are skipped, never cut short. |
 | Months and decades | months from the same random sample (OBIS orders rows by random UUID); decades from OBIS `statistics/years` |
 | Migration networks | MiCO, stored in `public/data/mico/` (492 KB, 109 species, 1,706 links) by `npm run mico` |
-| Globe | NASA Blue Marble through GIBS; borders and names from OpenStreetMap vector tiles through OpenFreeMap |
+| Globe | NASA Blue Marble through GIBS; Sentinel-2 cloudless 2016 by EOX (CC BY 4.0) from zoom 6; borders and names from OpenStreetMap vector tiles through OpenFreeMap |
+| Inventory completeness | bias-corrected Chao1 from records per species in the square (shown only when the whole list fits in one answer, because the missing tail is exactly the rare species Chao1 needs) |
+| Last looked at | `npm run data` also fetches the grid for records since 10, 20 and 50 years ago and stores the newest period per square |
+| Size, lifespan, sound | Wikidata P2043 length, P2067 mass, P2250 life expectancy (largest value, units converted) and P51 audio; Commons MP3 transcode for Safari |
+| Then and now | OBIS `occurrence/grid` with `enddate=1989-12-31` and `startdate=2010-01-01`; shift = change in the mean absolute latitude of the squares |
 
 Two things are stored with the site:
 
@@ -121,6 +136,8 @@ Two things are stored with the site:
 | Marine Regions | CC BY 4.0 |
 | NASA Blue Marble | public domain |
 | Borders and place names | © OpenStreetMap contributors, ODbL; tiles by OpenFreeMap |
+| Close-up imagery | Sentinel-2 cloudless 2016 by EOX IT Services, CC BY 4.0 (contains modified Copernicus Sentinel data 2016) |
+| Sounds | each file's own licence on Wikimedia Commons, shown with the player |
 | MiCO migration networks | CC0 1.0; Bentley et al. (2025) Marine megavertebrate migrations connect the global ocean, Nature Communications, https://doi.org/10.1038/s41467-025-59271-7; data https://doi.org/10.5281/zenodo.14873514 |
 | Tracking studies | each study's own licence (CC BY or CC BY-NC), named on the species page |
 
@@ -137,8 +154,8 @@ npm run shots      # regenerate docs/img/*.png from a running dev server (needs 
 ```
 
 Pushes to `main` run the tests, build the site and publish it to Cloudflare Pages (project `ocean-life-atlas`,
-`.github/workflows/deploy.yml`). The deploy step needs the repository secret `CLOUDFLARE_API_TOKEN` (Cloudflare
-Pages: Edit) and is skipped with a warning without it. Manual deploy: `npm run build && npx wrangler pages deploy dist
+`.github/workflows/deploy.yml`), using the `bristleconelab` organisation secret `CLOUDFLARE_API_TOKEN` (Cloudflare
+Pages: Edit). Manual deploy: `npm run build && npx wrangler pages deploy dist
 --project-name ocean-life-atlas --branch main`.
 
 ## Related

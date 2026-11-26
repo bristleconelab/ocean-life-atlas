@@ -8,22 +8,35 @@ import { Panel } from './panel';
 import { initSearch } from './search';
 import { initSheet } from './sheet';
 import { formatHash, parseHash, type ViewState } from './state';
+import { L, lang, setLang } from './i18n';
+import { initTour } from './tour';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
 const base = import.meta.env.BASE_URL;
-const lang = api.readerLanguage();
+// static text in index.html carries its Uzbek in data-uz (text), data-uz-placeholder and data-uz-label (aria-label)
+if (lang === 'uz') {
+  document.documentElement.lang = 'uz';
+  document.querySelectorAll<HTMLElement>('[data-uz]').forEach((el) => { el.textContent = el.dataset.uz!; });
+  document.querySelectorAll<HTMLInputElement>('[data-uz-placeholder]').forEach((el) => { el.placeholder = el.dataset.uzPlaceholder!; });
+  document.querySelectorAll<HTMLElement>('[data-uz-label]').forEach((el) => el.setAttribute('aria-label', el.dataset.uzLabel!));
+}
+document.querySelectorAll<HTMLButtonElement>('.lang-switch button').forEach((b) => {
+  b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+  b.addEventListener('click', () => { if (b.dataset.lang !== lang) setLang(b.dataset.lang as 'en' | 'uz'); });
+});
 
-const globe = new Globe($('#map'), base, lang);
+const globe = new Globe($('#map'), base, api.readerLanguage());
 const hint = $('#hint');
 const wide = () => window.matchMedia('(min-width: 760px)').matches;
-let looked = false;
+let looked: boolean | 'age' = false;
+let tourStep: number | null = null;
 /** True while the view is being rebuilt from the URL (first load, Back/Forward): the URL is already right. */
 let restoring = false;
 
 /** Every new place or species is a step in the browser history, so Back returns to the one before.
  *  Switching the records layer only rewrites the current step. */
 const setHash = (s: ViewState, replace = false) => {
-  const next = formatHash({ ...s, looked });
+  const next = formatHash({ ...s, looked, tour: tourStep ?? undefined });
   const url = next || location.pathname + location.search;
   if (next === location.hash || (!next && !location.hash)) return;
   if (restoring || replace) history.replaceState(null, '', url);
@@ -48,6 +61,12 @@ const panel = new Panel(panelEl, $('#panel .panel-body'), {
     fitTo: (p) => globe.fitTo(p),
     base,
   },
+  focusSearch: (placeholder) => {
+    const input = $<HTMLInputElement>('#search');
+    input.placeholder = placeholder;
+    input.value = '';
+    input.focus();
+  },
   opened: (open) => {
     const was = document.body.classList.contains('panel-open');
     document.body.classList.toggle('panel-open', open);
@@ -64,7 +83,13 @@ globe.onClick((lon, lat) => {
 });
 
 initSearch($('#search'), $('#hits'), $('#search-status'),
-  (id) => { hint.hidden = true; panel.showSpecies(id); },
+  (id) => {
+    hint.hidden = true;
+    const from = panel.comparingFrom;
+    const input = $<HTMLInputElement>('#search');
+    input.placeholder = input.dataset[lang === 'uz' ? 'uzPlaceholder' : 'placeholder'] ?? input.placeholder;
+    if (from && from !== id) panel.showCompare(from, id); else panel.showSpecies(id);
+  },
   (p) => {
     hint.hidden = true;
     if (p.bbox) globe.fitBox(p.bbox); else globe.flyTo(p.lon, p.lat, 4);
@@ -76,42 +101,60 @@ const nearBtn = $<HTMLButtonElement>('#near-me');
 if (!('geolocation' in navigator)) nearBtn.hidden = true;
 nearBtn.addEventListener('click', () => {
   nearBtn.disabled = true;
-  nearBtn.textContent = 'Finding you…';
+  nearBtn.textContent = L('Finding you…', 'Joylashuv aniqlanmoqda…');
   navigator.geolocation.getCurrentPosition((pos) => {
-    nearBtn.disabled = false; nearBtn.textContent = 'Near me';
+    nearBtn.disabled = false; nearBtn.textContent = L('Near me', 'Yonimda');
     const { latitude: lat, longitude: lon } = pos.coords;
     hint.hidden = true;
     globe.flyTo(lon, lat, 4);
     panel.showPlace(lat, lon);
   }, (err) => {
-    nearBtn.disabled = false; nearBtn.textContent = 'Near me';
+    nearBtn.disabled = false; nearBtn.textContent = L('Near me', 'Yonimda');
     hint.hidden = false;
     hint.textContent = err.code === err.PERMISSION_DENIED
-      ? 'Location is switched off for this site. Allow it in the browser, or click the sea near you.'
-      : 'Your location did not come through. Click the sea near you instead.';
+      ? L('Location is switched off for this site. Allow it in the browser, or click the sea near you.', 'Bu sayt uchun joylashuv oʻchirilgan. Brauzerda ruxsat bering yoki yaqiningizdagi dengizni bosing.')
+      : L('Your location did not come through. Click the sea near you instead.', 'Joylashuvingiz aniqlanmadi. Oʻrniga yaqiningizdagi dengizni bosing.');
   }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
 });
 
 // "Where scientists have looked"
 const lookedBtn = $<HTMLButtonElement>('#looked');
 const legend = $('#legend');
-const setLooked = async (on: boolean) => {
+const setLooked = async (on: boolean | 'age') => {
   looked = on;
-  lookedBtn.setAttribute('aria-pressed', String(on));
+  lookedBtn.setAttribute('aria-pressed', String(!!on));
   legend.hidden = !on;
+  legend.dataset.mode = on === 'age' ? 'age' : 'records';
+  legend.querySelectorAll<HTMLButtonElement>('.mode button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.mode === 'age') === (on === 'age'))));
   try {
-    const meta = await globe.setLooked(on);
-    if (meta) $('#legend-note').textContent = `${fmt(meta.total)} OBIS records at sea in ${fmt(meta.cells)} squares, counted ${meta.fetched}; records on land are left out. Where you see the plain globe, nobody has recorded anything.`;
+    const meta = await globe.setLooked(!!on);
+    if (on) globe.setLookedMode(on === 'age' ? 'age' : 'records');
+    if (meta) $('#legend-note').textContent = L(`${fmt(meta.total)} OBIS records at sea in ${fmt(meta.cells)} squares, counted ${meta.fetched}; records on land are left out. Where you see the plain globe, nobody has recorded anything.`,
+      `${fmt(meta.cells)} ta kvadratda dengizdagi ${fmt(meta.total)} ta OBIS yozuvi, ${meta.fetched} da sanalgan; quruqlikdagi yozuvlar chiqarilgan. Oddiy globus koʻringan joyda hech kim hech narsa qayd etmagan.`);
   } catch (e) {
-    $('#legend-note').textContent = 'This layer did not load. Reload the page to try again.';
+    $('#legend-note').textContent = L('This layer did not load. Reload the page to try again.', 'Bu qatlam yuklanmadi. Sahifani qayta yuklang.');
     console.warn(e);
   }
   setHash(parseHash(location.hash), true);
 };
-lookedBtn.addEventListener('click', () => setLooked(!looked));
+lookedBtn.addEventListener('click', () => setLooked(looked ? false : true));
+legend.querySelectorAll<HTMLButtonElement>('.mode button').forEach((b) => b.addEventListener('click', () => setLooked(b.dataset.mode === 'age' ? 'age' : true)));
+
+// Guided tour
+const tour = initTour($('#tour'), {
+  place: (lat, lon, zoom) => { hint.hidden = true; globe.flyTo(lon, lat, zoom); panel.showPlace(lat, lon); },
+  species: (id) => { hint.hidden = true; panel.showSpecies(id); },
+  layer: (mode) => { setLooked(mode === 'age' ? 'age' : mode ? true : false); },
+  globe: (lon, lat, zoom) => globe.flyTo(lon, lat, zoom),
+  closePanel: () => { if (panel.isOpen) panel.close(); },
+  setStep: (n) => { tourStep = n; setHash(parseHash(location.hash), true); },
+});
+$('#tour-open').addEventListener('click', () => { hint.hidden = true; tour.start(1); });
 
 // Migrations: the species with a MiCO network, by kind of animal, most connected first
-const GROUP_NAME: Record<string, string> = { seaturtle: 'Sea turtles', mammal: 'Sea mammals', bird: 'Seabirds', fish: 'Fish and sharks' };
+const GROUP_NAME: Record<string, string> = lang === 'uz'
+  ? { seaturtle: 'Dengiz toshbaqalari', mammal: 'Dengiz sutemizuvchilari', bird: 'Dengiz qushlari', fish: 'Baliqlar va akulalar' }
+  : { seaturtle: 'Sea turtles', mammal: 'Sea mammals', bird: 'Seabirds', fish: 'Fish and sharks' };
 const migrations = $<HTMLDialogElement>('#migrations');
 const migFilter = $<HTMLInputElement>('#mig-filter');
 $('#migrations-open').addEventListener('click', async () => {
@@ -128,14 +171,14 @@ $('#migrations-open').addEventListener('click', async () => {
       for (const [id, sp] of mine) {
         const b = h('button', { class: 'mig', attrs: { 'data-q': `${sp.common} ${sp.scientific}`.toLowerCase() } },
           h('span', { class: 'mig-name', text: sp.common }), h('span', { class: 'latin', text: sp.scientific }),
-          h('span', { class: 'mig-n', text: sp.routes ? `${plural(sp.sites, 'place')}, ${plural(sp.routes, 'link')}` : plural(sp.sites, 'place') }));
+          h('span', { class: 'mig-n', text: sp.routes ? L(`${plural(sp.sites, 'place')}, ${plural(sp.routes, 'link')}`, `${fmt(sp.sites)} ta joy, ${fmt(sp.routes)} ta bogʻlanish`) : L(plural(sp.sites, 'place'), `${fmt(sp.sites)} ta joy`) }));
         b.addEventListener('click', () => { migrations.close(); hint.hidden = true; panel.showSpecies(Number(id)); });
         ul.append(h('li', {}, b));
       }
       list.append(h('section', { class: 'mig-group' }, h('h3', { text: `${GROUP_NAME[g]} (${mine.length})` }), ul));
     }
   } catch {
-    list.append(h('p', { class: 'fine', text: 'The list did not load. Reload the page to try again.' }));
+    list.append(h('p', { class: 'fine', text: L('The list did not load. Reload the page to try again.', 'Roʻyxat yuklanmadi. Sahifani qayta yuklang.') }));
   }
 });
 migFilter.addEventListener('input', () => {
@@ -164,8 +207,10 @@ document.addEventListener('keydown', (e) => {
 const apply = (s: ViewState) => {
   restoring = true;
   try {
-    if (!!s.looked !== looked) setLooked(!!s.looked);
-    if (s.sp) {
+    if ((s.looked ?? false) !== looked) setLooked(s.looked ?? false);
+    if (s.tour && !tour.open) tour.start(s.tour);
+    if (s.sp && s.vs) { hint.hidden = true; panel.showCompare(s.sp, s.vs); }
+    else if (s.sp) {
       hint.hidden = true;
       if (s.at) { panel.rememberPlace(s.at.lat, s.at.lon); globe.flyTo(s.at.lon, s.at.lat, 3.2); }
       panel.showSpecies(s.sp, !!s.at);
