@@ -27,7 +27,7 @@
 
 | Migrations and tag tracks | How complete each area is |
 |---|---|
-| <img src="docs/img/journeys.png" alt="Leatherback sea turtle: migration network and tracks of tagged turtles"> | <img src="docs/img/complete.png" alt="Share of likely species recorded, per hexagon of ocean"> |
+| <img src="docs/img/migrations-tracks.png" alt="Leatherback sea turtle: migration network and tracks of tagged turtles"> | <img src="docs/img/complete.png" alt="Share of likely species recorded, per hexagon of ocean"> |
 
 A short list usually means few people looked, not that little lives there.
 

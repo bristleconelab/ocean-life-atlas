@@ -10,7 +10,7 @@ mkdirSync(out, { recursive: true });
 
 const shots = [
   { file: 'hero.png', hash: '#at=-16.50,146.20', size: [1440, 900], wait: '.tile img.in' },
-  { file: 'journeys.png', hash: '#sp=137209', size: [1440, 900], click: '.tags .btn', wait: '.track-list' },
+  { file: 'migrations-tracks.png', hash: '#sp=137209', size: [1440, 900], click: '.tags .btn', wait: '.track-list' },
   { file: 'complete.png', hash: '#layer=complete', size: [1440, 900], wait: null },
   { file: 'phone.png', hash: '#at=27.50,34.20', size: [390, 844], wait: '.tile img.in', mobile: true },
 ]
