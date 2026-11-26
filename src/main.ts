@@ -10,6 +10,7 @@ import { initSheet } from './sheet';
 import { formatHash, parseHash, type ViewState } from './state';
 import { L, lang, setLang } from './i18n';
 import { initTour } from './tour';
+import { initQuiz } from './quiz';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
 const base = import.meta.env.BASE_URL;
@@ -28,7 +29,7 @@ document.querySelectorAll<HTMLButtonElement>('.lang-switch button').forEach((b) 
 const globe = new Globe($('#map'), base, api.readerLanguage());
 const hint = $('#hint');
 const wide = () => window.matchMedia('(min-width: 760px)').matches;
-let looked: boolean | 'age' = false;
+let looked: boolean | 'age' | 'complete' = false;
 let tourStep: number | null = null;
 /** True while the view is being rebuilt from the URL (first load, Back/Forward): the URL is already right. */
 let restoring = false;
@@ -120,25 +121,35 @@ nearBtn.addEventListener('click', () => {
 // "Where scientists have looked"
 const lookedBtn = $<HTMLButtonElement>('#looked');
 const legend = $('#legend');
-const setLooked = async (on: boolean | 'age') => {
+type Looked = boolean | 'age' | 'complete';
+const modeOf = (on: Looked) => (on === 'age' ? 'age' : on === 'complete' ? 'complete' : 'records');
+let recordsNote = '';
+const setLooked = async (on: Looked) => {
   looked = on;
   lookedBtn.setAttribute('aria-pressed', String(!!on));
   legend.hidden = !on;
-  legend.dataset.mode = on === 'age' ? 'age' : 'records';
-  legend.querySelectorAll<HTMLButtonElement>('.mode button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.mode === 'age') === (on === 'age'))));
+  const mode = modeOf(on);
+  legend.dataset.mode = mode;
+  legend.querySelectorAll<HTMLButtonElement>('.mode button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+  const note = $('#legend-note');
   try {
     const meta = await globe.setLooked(!!on);
-    if (on) globe.setLookedMode(on === 'age' ? 'age' : 'records');
-    if (meta) $('#legend-note').textContent = L(`${fmt(meta.total)} OBIS records at sea in ${fmt(meta.cells)} squares, counted ${meta.fetched}; records on land are left out. Where you see the plain globe, nobody has recorded anything.`,
+    if (meta) recordsNote = L(`${fmt(meta.total)} OBIS records at sea in ${fmt(meta.cells)} squares, counted ${meta.fetched}; records on land are left out. Where you see the plain globe, nobody has recorded anything.`,
       `${fmt(meta.cells)} ta kvadratda dengizdagi ${fmt(meta.total)} ta OBIS yozuvi, ${meta.fetched} da sanalgan; quruqlikdagi yozuvlar chiqarilgan. Oddiy globus koʻringan joyda hech kim hech narsa qayd etmagan.`);
+    if (on) await globe.setLookedMode(mode);
+    const cm = globe.completeInfo;
+    note.textContent = mode === 'complete' && cm
+      ? L(`Share of the likely species already recorded (Chao1), in ${fmt(cm.cells)} hexagons of about 12,400 km²; grey: fewer than 20 species, too few to estimate. Built from the whole OBIS store (${cm.source.replace(/^.*read /, '')}).`,
+        `Ehtimoliy turlarning qayd etilgan ulushi (Chao1), taxminan 12 400 km² lik ${fmt(cm.cells)} ta oltiburchakda; kulrang — 20 tadan kam tur, baholab boʻlmaydi. Butun OBIS maʼlumotidan hisoblangan (${cm.source.replace(/^.*read /, '')}).`)
+      : recordsNote || note.textContent;
   } catch (e) {
-    $('#legend-note').textContent = L('This layer did not load. Reload the page to try again.', 'Bu qatlam yuklanmadi. Sahifani qayta yuklang.');
+    note.textContent = L('This layer did not load. Reload the page to try again.', 'Bu qatlam yuklanmadi. Sahifani qayta yuklang.');
     console.warn(e);
   }
   setHash(parseHash(location.hash), true);
 };
 lookedBtn.addEventListener('click', () => setLooked(looked ? false : true));
-legend.querySelectorAll<HTMLButtonElement>('.mode button').forEach((b) => b.addEventListener('click', () => setLooked(b.dataset.mode === 'age' ? 'age' : true)));
+legend.querySelectorAll<HTMLButtonElement>('.mode button').forEach((b) => b.addEventListener('click', () => setLooked(b.dataset.mode === 'age' ? 'age' : b.dataset.mode === 'complete' ? 'complete' : true)));
 
 // Guided tour
 const tour = initTour($('#tour'), {
@@ -150,6 +161,14 @@ const tour = initTour($('#tour'), {
   setStep: (n) => { tourStep = n; setHash(parseHash(location.hash), true); },
 });
 $('#tour-open').addEventListener('click', () => { hint.hidden = true; tour.start(1); });
+
+// Quiz
+const quiz = initQuiz($<HTMLDialogElement>('#quiz'), {
+  flyTo: (lon, lat, zoom) => globe.flyTo(lon, lat, zoom),
+  showSquare: (b) => globe.showSquare(b),
+  closePanel: () => { if (panel.isOpen) panel.close(); if (tour.open) tour.end(); },
+});
+$('#quiz-open').addEventListener('click', () => { hint.hidden = true; quiz.open(); });
 
 // Migrations: the species with a MiCO network, by kind of animal, most connected first
 const GROUP_NAME: Record<string, string> = lang === 'uz'

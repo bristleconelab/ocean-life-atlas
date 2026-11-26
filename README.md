@@ -32,6 +32,11 @@
 - **Side by side**: compare two species (records, usual depth, surface temperature, Red List, where their ranges meet).
 - **Take it with you**: the species list of a square as CSV, a range as GeoJSON, and a ready citation.
 - **Tour**: seven stops, from the most-studied coasts to water nobody has looked at in fifty years.
+- **Quiz**: "who has been recorded here?" The globe flies to a well-known sea (Great Barrier Reef, Galápagos, Antarctic
+  Peninsula...); one of four photographed animals is on that square's real OBIS list, the three others come from other
+  quiz places and are checked never to have been recorded there.
+- **How complete**, a third colouring of *Where scientists have looked*: every H3 hexagon of the ocean (~12,400 km²)
+  coloured by the share of its likely species already recorded (Chao1), computed from the whole OBIS store.
 - Interface in English and Uzbek (EN / UZ switch; animal names and Wikipedia follow the chosen language).
 - Species without a photo get a drawn silhouette of their kind instead of a blank tile.
 - Switch on **Where scientists have looked** to see how unevenly the ocean has been sampled. A short species list
@@ -82,6 +87,7 @@ it.
 | Migration networks | MiCO, stored in `public/data/mico/` (492 KB, 109 species, 1,706 links) by `npm run mico` |
 | Globe | NASA Blue Marble through GIBS; Sentinel-2 cloudless 2016 by EOX (CC BY 4.0) from zoom 6; borders and names from OpenStreetMap vector tiles through OpenFreeMap |
 | Inventory completeness | bias-corrected Chao1 from records per species in the square (shown only when the whole list fits in one answer, because the missing tail is exactly the rare species Chao1 needs) |
+| How complete (global) | `scripts/build_h3_completeness.py`: DuckDB over the OBIS open-data parquet files (s3://obis-open-data/occurrence, 7,466 files, 99 GB in 2026-11; mirrored first, because reading thousands of small remote files from Central Asia ran at ~200 KB/s), records per species per H3 resolution-3 cell (not dropped, not absent, not ON_LAND), bias-corrected Chao1 per cell where it holds 20 species or more; written with the hexagon outlines so the browser needs no H3 library |
 | Last looked at | `npm run data` also fetches the grid for records since 10, 20 and 50 years ago and stores the newest period per square |
 | Size, lifespan, sound | Wikidata P2043 length, P2067 mass, P2250 life expectancy (largest value, units converted) and P51 audio; Commons MP3 transcode for Safari |
 | Then and now | OBIS `occurrence/grid` with `enddate=1989-12-31` and `startdate=2010-01-01`; shift = change in the mean absolute latitude of the squares |

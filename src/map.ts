@@ -18,6 +18,8 @@ const S2 = 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 /** "Last surveyed" classes: newest records within 10, 10-20, 20-50 years, or older/undated only. */
 export const AGE_COLORS = ['#5fc0b0', '#f2c94c', '#e07a5f', '#8e4fa0'];
+/** Inventory completeness, low to high (Chao1 share recorded): most still unknown -> nearly all found. */
+export const COMPLETE_COLORS = ['#8e2f5a', '#e07a5f', '#f2c94c', '#5fc0b0'];
 /** Range squares by period (then and now) or by species (side by side). */
 export const RANGE_COLORS = { then: '#b39ddb', now: '#f2c94c', both: '#f4f8f7', a: '#f2c94c', b: '#8ecbff' };
 const LOOKED_RECORDS: ExpressionSpecification = ['interpolate', ['linear'], ['log10', ['max', 1, ['get', 'd']]],
@@ -90,6 +92,7 @@ function style(lang: string): StyleSpecification {
       },
       omt: { type: 'vector', url: OMT, attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
       looked: { type: 'geojson', data: EMPTY },
+      complete: { type: 'geojson', data: EMPTY },
       range: { type: 'geojson', data: EMPTY },
       square: { type: 'geojson', data: EMPTY },
       micoRoutes: { type: 'geojson', data: EMPTY },
@@ -106,6 +109,15 @@ function style(lang: string): StyleSpecification {
         paint: {
           'fill-color': LOOKED_RECORDS,
           'fill-opacity': 0.82,
+          'fill-antialias': false,
+        },
+      },
+      {
+        id: 'complete', type: 'fill', source: 'complete', layout: { visibility: 'none' },
+        paint: {
+          'fill-color': ['case', ['==', ['get', 'c'], -1], '#5b6670',
+            ['interpolate', ['linear'], ['get', 'c'], 0.2, COMPLETE_COLORS[0], 0.45, COMPLETE_COLORS[1], 0.7, COMPLETE_COLORS[2], 0.9, COMPLETE_COLORS[3]]],
+          'fill-opacity': ['case', ['==', ['get', 'c'], -1], 0.45, 0.82],
           'fill-antialias': false,
         },
       },
@@ -215,6 +227,18 @@ export class Globe {
   private hover(e: MapMouseEvent) {
     const f = this.pick(e);
     this.map.getCanvas().style.cursor = f ? 'pointer' : '';
+    if (!f && this.map.getLayoutProperty('complete', 'visibility') === 'visible') {
+      const cell = this.map.queryRenderedFeatures(e.point, { layers: ['complete'] })[0];
+      if (cell) {
+        const p = cell.properties ?? {};
+        const c = Number(p.c), s = Number(p.s) || 0, f1 = Number(p.f1) || 0, y = Number(p.y) || 0;
+        this.hoverPop.setLngLat(e.lngLat).setDOMContent(h('div', { class: 'pop' },
+          h('strong', { text: c >= 0 ? L(`About ${Math.round(c * 100)} % recorded`, `Taxminan ${Math.round(c * 100)} % qayd etilgan`) : L('Too few species to estimate', 'Baholash uchun turlar juda kam') }),
+          h('span', { text: L(`${fmt(s)} species, ${fmt(f1)} of them recorded once${y ? `; newest record ${y}` : ''}. Click to see the list.`,
+            `${fmt(s)} ta tur, ${fmt(f1)} tasi bir marta qayd etilgan${y ? `; eng yangi yozuv ${y}` : ''}. Roʻyxatni koʻrish uchun bosing.`) }))).addTo(this.map);
+        return;
+      }
+    }
     if (!f && this.map.getLayoutProperty('looked', 'visibility') === 'visible') {
       const cell = this.map.queryRenderedFeatures(e.point, { layers: ['looked'] })[0];
       if (cell) {
@@ -283,18 +307,49 @@ export class Globe {
       this.lookedLoaded = true;
       meta = { total: d.total, fetched: d.fetched, cells: d.n.length };
     }
-    this.map.setLayoutProperty('looked', 'visibility', on ? 'visible' : 'none');
-    if (!on) this.hoverPop.remove();
+    this.lookedOn = on;
+    this.map.setLayoutProperty('looked', 'visibility', on && this.lookedMode !== 'complete' ? 'visible' : 'none');
+    if (!on) { this.hoverPop.remove(); this.map.setLayoutProperty('complete', 'visibility', 'none'); }
+    else if (this.lookedMode === 'complete') this.map.setLayoutProperty('complete', 'visibility', 'visible');
     return meta;
   }
 
   /** Colour the "looked" squares by how many records (density) or by how long ago the last one was made. */
-  async setLookedMode(mode: 'records' | 'age') {
+  async setLookedMode(mode: 'records' | 'age' | 'complete') {
     await this.ready;
     this.lookedMode = mode;
+    if (mode === 'complete') {
+      await this.loadComplete();
+      this.map.setLayoutProperty('looked', 'visibility', 'none');
+      this.map.setLayoutProperty('complete', 'visibility', 'visible');
+      return;
+    }
+    this.map.setLayoutProperty('complete', 'visibility', 'none');
+    if (this.lookedOn) this.map.setLayoutProperty('looked', 'visibility', 'visible');
     this.map.setPaintProperty('looked', 'fill-color', mode === 'age' ? LOOKED_AGE : LOOKED_RECORDS);
   }
-  private lookedMode: 'records' | 'age' = 'records';
+  private lookedMode: 'records' | 'age' | 'complete' = 'records';
+  private lookedOn = false;
+  private completeMeta: { cells: number; estimated: number; source: string } | null = null;
+
+  /** H3 cells (resolution 3) with their Chao1 completeness, built from the whole OBIS store by
+   *  scripts/build_h3_completeness.py; loaded the first time the mode is chosen. */
+  async loadComplete(): Promise<{ cells: number; estimated: number; source: string } | null> {
+    if (this.completeMeta) return this.completeMeta;
+    const r = await fetch(`${this.dataBase}data/completeness-h3.json`);
+    if (!r.ok) throw new Error(`completeness layer: HTTP ${r.status}`);
+    const d = (await r.json()) as { source: string; cells: { r: number[]; s: number; f1: number; n: number; y: number | null; c: number | null }[] };
+    const features: GeoJSON.Feature[] = d.cells.map((x) => {
+      const ring: [number, number][] = [];
+      for (let i = 0; i < x.r.length; i += 2) ring.push([x.r[i], x.r[i + 1]]);
+      ring.push(ring[0]);
+      return { type: 'Feature', properties: { s: x.s, f1: x.f1, n: x.n, y: x.y ?? 0, c: x.c ?? -1 }, geometry: { type: 'Polygon', coordinates: [ring] } };
+    });
+    (this.map.getSource('complete') as GeoJSONSource).setData({ type: 'FeatureCollection', features });
+    this.completeMeta = { cells: d.cells.length, estimated: d.cells.filter((x) => x.c != null).length, source: d.source };
+    return this.completeMeta;
+  }
+  get completeInfo() { return this.completeMeta; }
 
   async flyTo(lon: number, lat: number, zoom?: number) {
     await this.ready;

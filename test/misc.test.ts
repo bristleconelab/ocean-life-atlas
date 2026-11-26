@@ -9,6 +9,10 @@ describe('url state', () => {
     const s = { at: { lat: 22.52, lon: 69.61 }, sp: 105847, looked: true };
     expect(parseHash(formatHash(s))).toEqual(s);
   });
+  it('keeps the colouring of the looked layer', () => {
+    expect(parseHash(formatHash({ looked: 'complete' }))).toEqual({ looked: 'complete' });
+    expect(parseHash(formatHash({ looked: 'age' }))).toEqual({ looked: 'age' });
+  });
   it('ignores junk', () => {
     expect(parseHash('#at=999,1&sp=-3&layer=x')).toEqual({});
     expect(formatHash({})).toBe('');

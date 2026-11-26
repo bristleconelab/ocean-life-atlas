@@ -345,3 +345,26 @@ body.panel-open .lang-switch { right: 472px; }
 }
 /* five corner buttons now reach the middle of the screen: the hint sits above them */
 #hint { bottom: 84px; }
+
+/* ---------- quiz: a card over the globe, not modal, so the globe can show where the question is ---------- */
+#quiz { position: fixed; inset: auto auto 84px 16px; margin: 0; width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 180px); overflow: auto;
+  border: 0; border-radius: var(--r-panel); padding: 20px 20px 16px; color: var(--ink); background: var(--foam); box-shadow: 0 16px 40px rgb(4 20 30 / 0.45); z-index: 7; }
+#quiz h2 { margin: 2px 36px 12px 0; font-size: 21px; line-height: 1.15; letter-spacing: -0.015em; text-wrap: balance; }
+.quiz-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.quiz-choice { all: unset; box-sizing: border-box; display: grid; gap: 2px; width: 100%; padding: 6px; border-radius: 12px; cursor: pointer; border: 2px solid transparent; }
+.quiz-choice:hover:not(:disabled) { background: #e3eeec; }
+.quiz-choice:focus-visible { outline: 3px solid var(--plankton); }
+.quiz-choice .tile-photo { margin-bottom: 4px; }
+.quiz-choice .latin { font-size: 13px; color: var(--muted); }
+.quiz-choice.right { border-color: #2f8f82; background: #e2f2ee; }
+.quiz-choice.wrong { border-color: #c8102e; background: #fbe7ea; }
+.quiz-choice.other { opacity: 0.55; }
+.quiz-choice:disabled { cursor: default; }
+.quiz-note { min-height: 1.5em; margin: 12px 0 8px; }
+.quiz-score { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 4px 0 8px; }
+@media (max-width: 759px) { #quiz { inset: auto 8px 8px 8px; width: auto; max-height: 70vh; } .quiz-grid { gap: 6px; } }
+#legend[data-mode='complete'] .legend-records, #legend[data-mode='complete'] .legend-age,
+#legend[data-mode='records'] .legend-complete, #legend[data-mode='age'] .legend-complete { display: none; }
+.ramp.complete { background: linear-gradient(90deg, #8e2f5a, #e07a5f 33%, #f2c94c 66%, #5fc0b0); }
+#legend { width: 290px; }
+#legend .mode button { font-size: 12px; padding: 4px 8px; }

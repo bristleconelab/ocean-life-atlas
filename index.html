@@ -42,6 +42,7 @@
       <div class="mode" role="group" aria-label="Colour the squares by" data-uz-label="Kvadratlarni boʻyash">
         <button data-mode="records" aria-pressed="true" data-uz="Yozuvlar soni">How many records</button>
         <button data-mode="age" aria-pressed="false" data-uz="Oxirgi kuzatuv">Last looked at</button>
+        <button data-mode="complete" aria-pressed="false" data-uz="Toʻliqlik">How complete</button>
       </div>
       <div class="legend-records">
         <p class="legend-title" data-uz="10 000 km² ga yozuvlar">Records per 10,000 km²</p>
@@ -54,11 +55,16 @@
         <li><span class="swatch" style="background:#e07a5f"></span><span data-uz="20–50 yil oldin">20 to 50 years ago</span></li>
         <li><span class="swatch" style="background:#8e4fa0"></span><span data-uz="50 yildan oldin yoki sanasiz">over 50 years, or undated</span></li>
       </ul>
+      <div class="legend-complete">
+        <div class="ramp complete" aria-hidden="true"></div>
+        <div class="ramp-ticks" aria-hidden="true"><span>20 %</span><span>45 %</span><span>70 %</span><span>90 %+</span></div>
+      </div>
       <p id="legend-note" class="fine" data-uz="Yuklanmoqda…">Loading…</p>
     </div>
     <div class="corner-buttons">
       <button id="looked" class="btn" aria-pressed="false" data-uz="Olimlar qayerni oʻrgangan">Where scientists have looked</button>
       <button id="tour-open" class="btn ghost" data-uz="Sayohat">Tour</button>
+      <button id="quiz-open" class="btn ghost" data-uz="Viktorina">Quiz</button>
       <button id="near-me" class="btn ghost" data-uz="Yonimda">Near me</button>
       <button id="migrations-open" class="btn ghost" data-uz="Migratsiyalar">Migrations</button>
       <button id="about-open" class="btn ghost" data-uz="Haqida">About</button>
@@ -70,6 +76,8 @@
     <button class="panel-close" aria-label="Close panel" data-uz-label="Panelni yopish">×</button>
     <div class="panel-body"></div>
   </aside>
+
+  <dialog id="quiz" class="quiz" aria-label="Quiz"></dialog>
 
   <dialog id="migrations" aria-labelledby="migrations-title">
     <div class="mig-head">
