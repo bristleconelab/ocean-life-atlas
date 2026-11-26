@@ -87,3 +87,27 @@ export function greatCircle(a: [number, number], b: [number, number], steps = 32
   }
   return out;
 }
+
+/** Area of a lon/lat box on a sphere of the Earth's mean radius, km². A geohash-3 square is ~24,600 km² at the
+ *  equator and ~8,400 km² at 70°, which is why the "looked" layer shows records per area, not per square. */
+export function cellAreaKm2(b: BBox): number {
+  const R = 6371.0088, r = Math.PI / 180;
+  return R * R * Math.abs((b.east - b.west) * r) * Math.abs(Math.sin(b.north * r) - Math.sin(b.south * r));
+}
+
+/** Bounds of points around their circular mean longitude, so a set across 180° gives one tight box
+ *  (west may be below -180 or east above 180; MapLibre accepts that). */
+export function frameOf(points: [number, number][]): { west: number; east: number; south: number; north: number; lon: number; lat: number; wide: boolean } | null {
+  if (!points.length) return null;
+  let sx = 0, sy = 0;
+  for (const [x] of points) { sx += Math.cos((x * Math.PI) / 180); sy += Math.sin((x * Math.PI) / 180); }
+  const c = (Math.atan2(sy, sx) * 180) / Math.PI;
+  let w = Infinity, e = -Infinity, s = Infinity, n = -Infinity;
+  for (const [x, y] of points) {
+    const rel = ((((x - c + 540) % 360) + 360) % 360) - 180;
+    if (rel < w) w = rel; if (rel > e) e = rel;
+    if (y < s) s = y; if (y > n) n = y;
+  }
+  s = Math.max(-80, s); n = Math.min(80, n);
+  return { west: c + w, east: c + e, south: s, north: n, lon: c + (w + e) / 2, lat: (s + n) / 2, wide: e - w > 100 || n - s > 70 };
+}

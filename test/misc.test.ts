@@ -25,6 +25,7 @@ describe('wikidata', () => {
     expect(pickName({ label: { value: 'Rhincodon typus' }, commonEn: { value: 'whale shark' } }, 'Rhincodon typus')).toBe('Whale shark');
     expect(pickName({ common: { value: 'kit akula' } }, 'Rhincodon typus')).toBe('Kit akula');
     expect(pickName({ label: { value: 'Rhincodon typus' } }, 'Rhincodon typus')).toBeUndefined();
+    expect(pickName({ label: { value: 'Species code: Hs' }, labelEn: { value: 'Halophila stipulacea' } }, 'Halophila stipulacea')).toBeUndefined();
   });
   it('parses SPARQL bindings', () => {
     const m = parseWikidata([{ aphia: { value: '105847' }, image: { value: 'http://commons.wikimedia.org/wiki/Special:FilePath/X.jpg' }, labelEn: { value: 'whale shark' } }]);

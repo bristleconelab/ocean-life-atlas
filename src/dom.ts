@@ -21,6 +21,8 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Props = 
 }
 
 export const fmt = (n: number) => n.toLocaleString('en-US');
+/** "1 place", "3 places", "2 studies". */
+export const plural = (n: number, one: string, many = `${one}s`) => `${fmt(n)} ${n === 1 ? one : many}`;
 
 /** Load a photo into a frame, trying each URL in turn. The frame's data-photo says what the reader sees:
  *  "loading" (shimmer), "ok", or "none" (a quiet "No photo yet"). */

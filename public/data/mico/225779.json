@@ -1,1 +1,1 @@
-{"common":"Chatham Albatross","scientific":"Thalassarche eremita","sites":[[-176.241,-44.433,3,"Breeding"],[-175.15,-44.343,49,"Feeding"],[-71.65,-24.343,3,"Observation"]],"routes":[[-71.65,-24.343,-176.241,-44.433,1,1],[-71.65,-24.343,-176.241,-44.433,1,1],[-176.241,-44.433,-71.65,-24.343,3,3],[-71.65,-24.343,-176.241,-44.433,1,1]]}
+{"common":"Chatham Albatross","scientific":"Thalassarche eremita","group":"bird","sites":[[-176.241,-44.433,3,"Breeding"],[-175.15,-44.343,49,"Feeding"],[-71.65,-24.343,3,"Observation"]],"routes":[[-176.241,-44.433,-71.65,-24.343,1,1]]}

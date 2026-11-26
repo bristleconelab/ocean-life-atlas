@@ -1,7 +1,8 @@
 // Parsing Wikidata answers into what a species card needs. Pure (test/misc.test.ts).
 import { md5 } from './md5';
 
-export interface WikiInfo { name?: string; image?: string; article?: string }
+/** article: a Wikipedia URL, in the reader's language when one exists (articleLang says which). */
+export interface WikiInfo { name?: string; image?: string; article?: string; articleLang?: string }
 
 /** File name from a Commons Special:FilePath URL ("Whale shark Georgia aquarium.jpg"). */
 export function commonsFile(url: string): string | null {
@@ -50,18 +51,21 @@ export function pickName(b: Record<string, { value: string } | undefined>, scien
   const sci = scientific?.trim().toLowerCase();
   for (const k of ['label', 'common', 'labelEn', 'commonEn']) {
     const v = b[k]?.value?.trim();
-    if (v && v.toLowerCase() !== sci) return v.charAt(0).toUpperCase() + v.slice(1);
+    // skip catalogue entries that are not names ("Species code: Hs", seen on Halophila stipulacea)
+    if (v && v.toLowerCase() !== sci && !/:|\bcode\b/i.test(v)) return v.charAt(0).toUpperCase() + v.slice(1);
   }
   return undefined;
 }
 
-export function parseWikidata(bindings: Record<string, { value: string } | undefined>[], sciById?: Map<number, string>): Map<number, WikiInfo> {
+export function parseWikidata(bindings: Record<string, { value: string } | undefined>[], sciById?: Map<number, string>, lang = 'en'): Map<number, WikiInfo> {
   const out = new Map<number, WikiInfo>();
   for (const b of bindings) {
     const id = Number(b.aphia?.value);
-    if (!Number.isInteger(id)) continue;
+    if (!Number.isInteger(id) || id <= 0) continue;
     const image = b.image ? commonsFile(b.image.value) ?? undefined : undefined;
-    out.set(id, { name: pickName(b, sciById?.get(id)), image, article: b.article?.value });
+    const article = b.article?.value ?? b.articleEn?.value;
+    const articleLang = b.article?.value ? lang : b.articleEn?.value ? 'en' : undefined;
+    out.set(id, { name: pickName(b, sciById?.get(id)), image, article, articleLang });
   }
   return out;
 }

@@ -1,4 +1,5 @@
-// "Find a sea animal": common or scientific name, keyboard friendly (arrows, Enter, Escape).
+// One search box for sea animals (common name in any language, or scientific name) and for places ("Galapagos",
+// "Aral Sea", "Red Sea"). Keyboard friendly (arrows, Enter, Escape).
 import * as api from './api';
 import { h, loadPhoto } from './dom';
 import { mergeHits, rankHits, type Hit } from './search-merge';
@@ -6,61 +7,93 @@ import { GROUP_LABEL } from './taxa';
 import { commonsThumbs } from './wiki';
 import { silhouette } from './silhouettes';
 
-export function initSearch(input: HTMLInputElement, list: HTMLUListElement, status: HTMLElement, pick: (id: number) => void) {
-  // hitsFor: the query the current hits answer; Enter must not open a result left over from an earlier query
-  let timer = 0, seq = 0, hits: Hit[] = [], hitsFor = '', cursor = -1;
+type Item = { kind: 'taxon'; hit: Hit } | { kind: 'place'; place: api.Place };
+
+/** Han, kana and Hangul pack a word into one or two characters, so one is enough to search. */
+const DENSE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
+export const minQueryLength = (q: string) => (DENSE.test(q) ? 1 : 2);
+/** Anything outside basic Latin, or a reader whose browser is not in English: also ask Wikidata, which has names in
+ *  hundreds of languages ("kit akula", "китовая акула", "ジンベエザメ"). */
+const wantsWikidata = (q: string, lang: string) => lang !== 'en' || /[^\u0000-ɏ]/.test(q);
+
+const PIN = 'M32 6c-10 0-18 8-18 18 0 13 18 34 18 34s18-21 18-34c0-10-8-18-18-18zm0 11a7 7 0 1 1 0 14 7 7 0 0 1 0-14z';
+
+export function initSearch(input: HTMLInputElement, list: HTMLUListElement, status: HTMLElement,
+  pick: (id: number) => void, pickPlace: (p: api.Place) => void) {
+  // itemsFor: the query the current items answer; Enter must not open a result left over from an earlier query (#1)
+  let timer = 0, seq = 0, items: Item[] = [], itemsFor = '', cursor = -1, ctl: AbortController | null = null;
+  const lang = api.readerLanguage();
 
   const close = () => { list.hidden = true; cursor = -1; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); };
   const choose = (i: number) => {
-    const hit = hits[i];
-    if (!hit) return;
+    const it = items[i];
+    if (!it) return;
     close();
     input.blur();
-    pick(hit.id);
+    if (it.kind === 'taxon') pick(it.hit.id); else pickPlace(it.place);
   };
   const highlight = (i: number) => {
     cursor = i;
-    list.querySelectorAll('li').forEach((li, k) => li.setAttribute('aria-selected', String(k === i)));
+    list.querySelectorAll('li[role=option]').forEach((li, k) => li.setAttribute('aria-selected', String(k === i)));
     if (i >= 0) input.setAttribute('aria-activedescendant', `hit-${i}`);
   };
 
   const run = async (q: string) => {
     const my = ++seq;
+    ctl?.abort();
+    ctl = new AbortController();
+    const signal = ctl.signal;
     status.textContent = 'Searching…';
     const val = <T,>(r: PromiseSettledResult<T[]>) => (r.status === 'fulfilled' ? r.value : []);
-    const [ex, exCommon, p1, p2, o] = await Promise.allSettled([
-      api.wormsByVernacular(q, false), api.wormsByVernacular(`common ${q}`, false),
-      api.wormsByVernacular(q, true, 1), api.wormsByVernacular(q, true, 51), api.obisComplete(q),
+    const latin = q.length >= 3 && !/[^\u0000-ɏ]/.test(q); // WoRMS names are Latin-script
+    const none = Promise.resolve([] as never[]);
+    const [ex, exCommon, like, o, wd, places] = await Promise.allSettled([
+      latin ? api.wormsByVernacular(q, false, 1, signal) : none,
+      latin ? api.wormsByVernacular(`common ${q}`, false, 1, signal) : none,
+      latin ? api.wormsByVernacular(q, true, 1, signal) : none,
+      !/[^\u0000-\u024f]/.test(q) ? api.obisComplete(q, signal) : none,
+      wantsWikidata(q, lang) || q.length < 3 ? api.wikidataSearchAphia(q, lang, signal).then((ids) => api.wormsRecords(ids.slice(0, 8), signal)) : none,
+      q.length >= 3 && !/[^\u0000-\u024f]/.test(q) ? api.searchPlaces(q, signal) : none, // gazetteer names are Latin-script
     ]);
     if (my !== seq) return;
-    const exact = [...val(ex), ...val(exCommon)];
+    const wdRecs = val(wd).filter(Boolean);
+    const exact = [...val(ex), ...val(exCommon), ...wdRecs];
     const exactIds = new Set(exact.map((r) => r.valid_AphiaID ?? r.AphiaID));
-    const all = mergeHits([...exact, ...val(p1), ...val(p2)], val(o), q, 80, exactIds);
-    const counts = await api.obisRecordCounts(all.filter((x) => x.rank === 'Species').map((x) => x.id));
+    const all = mergeHits([...wdRecs, ...val(ex), ...val(exCommon), ...val(like)], val(o), q, 80, exactIds);
+    const counts = await api.obisRecordCounts(all.filter((x) => x.rank === 'Species').map((x) => x.id), signal);
     if (my !== seq) return;
-    hits = rankHits(all, counts, q);
-    hitsFor = q;
-    const w = { status: [ex, p1, o].every((r) => r.status === 'rejected') ? 'rejected' : 'fulfilled' };
+    const hits = rankHits(all, counts, q);
+    const pl = val(places).slice(0, hits.length ? 3 : 5);
+    // "Galapagos", "Red Sea": the place comes first when its name starts with the query and no animal is called that
+    const placesFirst = pl.length > 0 && pl[0].name.toLowerCase().startsWith(q.toLowerCase()) && !hits.some((x) => x.exact);
+    const taxa = hits.map((hit) => ({ kind: 'taxon' as const, hit })), spots = pl.map((place) => ({ kind: 'place' as const, place }));
+    items = placesFirst ? [...spots, ...taxa] : [...taxa, ...spots];
+    itemsFor = q;
+    const failed = [ex, like, o, wd].every((r) => r.status === 'rejected');
     list.replaceChildren();
-    if (!hits.length) {
-      status.textContent = w.status === 'rejected'
+    cursor = -1;
+    if (!items.length) {
+      status.textContent = failed
         ? 'Search is not answering right now. Check the connection and try again.'
-        : `No sea animal or plant called "${q}". Try another name, in English or Latin.`;
+        : `Nothing called "${q}" in the sea records or the gazetteer. Try another name, or the scientific name.`;
       list.append(h('li', { class: 'empty', text: status.textContent }));
-    } else status.textContent = `${hits.length} results`;
-    hits.forEach((hit, i) => {
-      const name = h('span', { class: 'hit-name', text: hit.scientificName });
-      const latin = h('span', { class: 'latin', text: '' });
-      const thumb = h('span', { class: `hit-thumb g-${hit.group}` }, silhouette(hit.group));
-      const li = h('li', { attrs: { id: `hit-${i}`, role: 'option', 'aria-selected': 'false' } }, thumb,
-        h('span', { class: 'hit-text' }, name, latin, h('span', { class: 'hit-group', text: hit.rank === 'Species' ? GROUP_LABEL[hit.group] : `${hit.rank}, ${GROUP_LABEL[hit.group].toLowerCase()}` })));
+    } else status.textContent = `${items.length} results`;
+    items.forEach((it, i) => {
+      if (it.kind === 'place' && (i === 0 || items[i - 1].kind !== 'place')) list.append(h('li', { class: 'hits-head', text: 'Places', attrs: { role: 'presentation' } }));
+      if (it.kind === 'taxon' && pl.length && (i === 0 || items[i - 1].kind !== 'taxon')) list.append(h('li', { class: 'hits-head', text: 'Sea life', attrs: { role: 'presentation' } }));
+      const li = it.kind === 'taxon' ? taxonRow(it.hit) : placeRow(it.place);
+      if (it.kind === 'taxon') li.dataset.taxon = String(it.hit.id);
+      li.id = `hit-${i}`;
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', 'false');
       li.addEventListener('mousedown', (e) => { e.preventDefault(); choose(i); });
       list.append(li);
     });
     list.hidden = false;
     input.setAttribute('aria-expanded', 'true');
+    if (!hits.length) return;
     const sci = new Map(hits.map((x) => [x.id, x.scientificName]));
-    const info = (await api.wikidataByAphia(hits.map((x) => x.id), sci).catch(() => null)) ?? new Map();
+    const info = (await api.wikidataByAphia(hits.map((x) => x.id), sci, lang, signal).catch(() => null)) ?? new Map();
     if (my !== seq) return;
     // names Wikidata did not give: English vernacular from WoRMS
     await Promise.all(hits.filter((x) => !info.get(x.id)?.name).map(async (x) => {
@@ -68,8 +101,8 @@ export function initSearch(input: HTMLInputElement, list: HTMLUListElement, stat
       if (en) info.set(x.id, { ...info.get(x.id), name: en.charAt(0).toUpperCase() + en.slice(1) });
     }));
     if (my !== seq) return;
-    hits.forEach((hit, i) => {
-      const w = info.get(hit.id), li = list.children[i] as HTMLElement | undefined;
+    hits.forEach((hit) => {
+      const w = info.get(hit.id), li = list.querySelector<HTMLElement>(`li[data-taxon="${hit.id}"]`);
       if (!w || !li) return;
       if (w.name) {
         li.querySelector('.hit-name')!.textContent = w.name;
@@ -82,15 +115,38 @@ export function initSearch(input: HTMLInputElement, list: HTMLUListElement, stat
   input.addEventListener('input', () => {
     clearTimeout(timer);
     const q = input.value.trim();
-    if (q.length < 3) { seq++; close(); status.textContent = ''; return; }
+    if (q.length < minQueryLength(q)) { seq++; ctl?.abort(); close(); status.textContent = ''; return; }
     timer = window.setTimeout(() => run(q), 280);
   });
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown' && hits.length) { e.preventDefault(); highlight(Math.min(cursor + 1, hits.length - 1)); }
-    else if (e.key === 'ArrowUp' && hits.length) { e.preventDefault(); highlight(Math.max(cursor - 1, 0)); }
-    else if (e.key === 'Enter') { e.preventDefault(); if (hitsFor === input.value.trim()) choose(cursor >= 0 ? cursor : 0); }
+    if (e.key === 'ArrowDown' && items.length) { e.preventDefault(); highlight(Math.min(cursor + 1, items.length - 1)); }
+    else if (e.key === 'ArrowUp' && items.length) { e.preventDefault(); highlight(Math.max(cursor - 1, 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (itemsFor === input.value.trim()) choose(cursor >= 0 ? cursor : 0); }
     else if (e.key === 'Escape') { close(); input.blur(); }
   });
   input.addEventListener('blur', () => setTimeout(close, 120));
-  input.addEventListener('focus', () => { if (hits.length && input.value.trim().length >= 3) { list.hidden = false; input.setAttribute('aria-expanded', 'true'); } });
+  input.addEventListener('focus', () => { if (items.length && input.value.trim().length >= minQueryLength(input.value.trim())) { list.hidden = false; input.setAttribute('aria-expanded', 'true'); } });
+}
+
+function taxonRow(hit: Hit): HTMLLIElement {
+  const name = h('span', { class: 'hit-name', text: hit.scientificName });
+  const latin = h('span', { class: 'latin', text: '' });
+  const thumb = h('span', { class: `hit-thumb g-${hit.group}` }, silhouette(hit.group));
+  return h('li', {}, thumb, h('span', { class: 'hit-text' }, name, latin,
+    h('span', { class: 'hit-group', text: hit.rank === 'Species' ? GROUP_LABEL[hit.group] : `${hit.rank}, ${GROUP_LABEL[hit.group].toLowerCase()}` })));
+}
+
+function placeRow(p: api.Place): HTMLLIElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 64 64');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('silhouette');
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', PIN);
+  path.setAttribute('fill-rule', 'evenodd');
+  svg.append(path);
+  const type = p.type === 'Marine Ecoregion of the World (MEOW)' ? 'Marine ecoregion' : p.type === 'IHO Sea Area' ? 'Sea area' : p.type;
+  return h('li', { class: 'place-hit' }, h('span', { class: 'hit-thumb place' }, svg),
+    h('span', { class: 'hit-text' }, h('span', { class: 'hit-name', text: p.name }), h('span', { class: 'hit-group', text: type })));
 }

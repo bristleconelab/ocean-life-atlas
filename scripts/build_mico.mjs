@@ -45,6 +45,12 @@ const KNOWN = {
 
 const round = (v, d = 3) => Math.round(Number(v) * 10 ** d) / 10 ** d;
 
+/** MiCO calls sea turtles "Green", "Loggerhead"...: say what they are. */
+export function displayName(common, group) {
+  if (group === 'seaturtle' && !/turtle/i.test(common)) return `${common} sea turtle`;
+  return common;
+}
+
 async function aphiaFor(scientific, common) {
   const get = async (url) => {
     const r = await fetch(url, { headers: UA });
@@ -83,9 +89,14 @@ async function main() {
   const [sh, ...sites] = read('mico_metasites.csv');
   const S = Object.fromEntries(sh.map((k, i) => [k, i]));
   const [rh, ...routes] = read('mico_metasites_crossing_oceans_all.csv');
-  // the header repeats eez_id/eez_name, so index by position
-  const R = { code: 0, common: 1, sci: 2, type: 3, sx: 7, sy: 8, src: 10, tgt: 11, ex: 14, ey: 15 };
-  if (rh[R.sx] !== 'start_x' || rh[R.ex] !== 'end_x' || rh[R.src] !== 'metasite_source') throw new Error('route columns moved');
+  // One row per route AND per pair of EEZs it touches (a route can repeat hundreds of times), and the header repeats
+  // eez_id/eez_name, so index by position. `source`/`target` are the metasite ids; `metasite_source`/`metasite_target`
+  // hold WKB geometry, not ids.
+  const R = { code: 0, common: 1, sci: 2, type: 3, src: 4, sx: 7, sy: 8, tgt: 11, ex: 14, ey: 15 };
+  if (rh[R.src] !== 'source' || rh[R.tgt] !== 'target' || rh[R.sx] !== 'start_x' || rh[R.ex] !== 'end_x' || rh[R.type] !== 'type') throw new Error('route columns moved');
+  // species.csv: common_name -> taxon (bird, fish, mammal, seaturtle)
+  const [, ...spRows] = read('species.csv');
+  const taxonOf = new Map(spRows.map((r) => [r[0], r[1]]));
 
   const species = new Map(); // code -> { common, sci }
   for (const s of sites) species.set(s[S.species_code], { common: s[S.common_name], sci: '' });
@@ -94,6 +105,7 @@ async function main() {
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
   const index = {}, unmatched = [];
+  let rowsIn = 0, routesOut = 0;
   for (const [code, sp] of species) {
     const a = await aphiaFor(sp.sci || KNOWN[code], sp.common);
     if (!a) { unmatched.push(`${code} ${sp.common}`); continue; }
@@ -101,22 +113,32 @@ async function main() {
       id: s[S.metasite_id], lon: round(s[S.longitude]), lat: round(s[S.latitude]), n: Math.round(Number(s[S.n_ndvdl]) || 0),
       act: s[S.activity],
     }));
+    // one line per pair of places, whichever way the animals went
     const pairs = new Map();
     for (const r of routes) {
       if (r[R.code] !== code) continue;
-      const key = `${r[R.src]}>${r[R.tgt]}`;
-      const p = pairs.get(key) ?? { s: [round(r[R.sx]), round(r[R.sy])], e: [round(r[R.ex]), round(r[R.ey])], n: 0, tracked: 0 };
-      p.n++;
-      if (r[R.type] === 'METAROUTE') p.tracked++;
+      rowsIn++;
+      const fwd = r[R.src] < r[R.tgt];
+      const key = fwd ? `${r[R.src]}|${r[R.tgt]}` : `${r[R.tgt]}|${r[R.src]}`;
+      const s = [round(r[R.sx]), round(r[R.sy])], e = [round(r[R.ex]), round(r[R.ey])];
+      const p = pairs.get(key) ?? { a: fwd ? s : e, b: fwd ? e : s, dirs: new Set(), tracked: false };
+      p.dirs.add(fwd ? 'ab' : 'ba');
+      if (r[R.type] === 'METAROUTE') p.tracked = true; // METAROUTE: from tracked animals; METACONNECTION: other evidence
       pairs.set(key, p);
     }
+    const group = taxonOf.get(sp.common) ?? '';
     const out = {
-      common: sp.common, scientific: a.scientific,
+      common: displayName(sp.common, group), scientific: a.scientific, group,
       sites: mySites.map((s) => [s.lon, s.lat, s.n, s.act]),
-      routes: [...pairs.values()].map((p) => [...p.s, ...p.e, p.n, p.tracked]),
+      // [lon1, lat1, lon2, lat2, tracked 1/0, both directions 1/0]
+      routes: [...pairs.values()].map((p) => [...p.a, ...p.b, p.tracked ? 1 : 0, p.dirs.size === 2 ? 1 : 0]),
     };
+    routesOut += out.routes.length;
     writeFileSync(join(OUT, `${a.id}.json`), JSON.stringify(out));
-    index[a.id] = { common: sp.common, scientific: a.scientific, sites: out.sites.length, routes: out.routes.length };
+    index[a.id] = {
+      common: out.common, scientific: a.scientific, group, sites: out.sites.length, routes: out.routes.length,
+      tracked: out.routes.filter((r) => r[4]).length,
+    };
   }
   writeFileSync(join(OUT, 'index.json'), JSON.stringify({
     source: 'Bentley et al. (2025) Marine megavertebrate migrations connect the global ocean, Nature Communications; data Zenodo 10.5281/zenodo.14873514 (CC0 1.0)',
@@ -124,7 +146,7 @@ async function main() {
   }));
   rmSync(dir, { recursive: true, force: true });
   const n = Object.keys(index).length;
-  console.log(`${n} species written to ${OUT}; ${unmatched.length} without a WoRMS match: ${unmatched.join('; ') || 'none'}`);
+  console.log(`${n} species written to ${OUT}; ${rowsIn} route rows -> ${routesOut} distinct routes; ${unmatched.length} without a WoRMS match: ${unmatched.join('; ') || 'none'}`);
   if (n < 90) throw new Error(`only ${n} species matched, expected about 109`);
 }
 

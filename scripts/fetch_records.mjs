@@ -1,11 +1,13 @@
 // Build public/data/records-gh3.json: how many OBIS records fall in each geohash-3 cell (1.40625 deg square).
 // This is the "where scientists have looked" layer. The live API takes ~9 s and 5 MB for the whole globe,
 // so it is fetched once here and stored compactly: parallel arrays of cell ids and counts.
+// exclude=ON_LAND drops records OBIS flags as lying on land (museum specimens with a city's coordinates, river and
+// lake records, inland bird counts): without it Moscow, central Germany and Kansas look like the best-studied "sea".
 //
 // usage: node scripts/fetch_records.mjs
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-const URL = 'https://api.obis.org/v3/occurrence/grid/3';
+const URL = 'https://api.obis.org/v3/occurrence/grid/3?exclude=ON_LAND';
 const B32 = '0123456789bcdefghjkmnpqrstuvwxyz';
 
 function geohash(lon, lat, precision) {
@@ -35,14 +37,15 @@ for (const f of fc.features) {
 
 const ids = [...cells.keys()].sort();
 const out = {
-  source: 'OBIS (2026) Ocean Biodiversity Information System, https://obis.org, API v3 occurrence/grid/3',
+  source: 'OBIS (2026) Ocean Biodiversity Information System, https://obis.org, API v3 occurrence/grid/3?exclude=ON_LAND',
+  filter: 'exclude=ON_LAND',
   fetched: new Date().toISOString().slice(0, 10),
   cellDeg: 1.40625,
   total: ids.reduce((s, id) => s + cells.get(id), 0),
   gh: ids.join(''),
   n: ids.map((id) => cells.get(id)),
 };
-if (ids.length < 20000) throw new Error(`only ${ids.length} cells, expected about 27,000`);
+if (ids.length < 18000) throw new Error(`only ${ids.length} cells, expected about 21,700`);
 mkdirSync('public/data', { recursive: true });
 writeFileSync('public/data/records-gh3.json', JSON.stringify(out));
 console.log(`${ids.length} cells, ${out.total.toLocaleString('en-US')} records -> public/data/records-gh3.json`);

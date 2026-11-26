@@ -1,7 +1,7 @@
 {
   "name": "ocean-life-atlas",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "Click the sea, see who lives there. An open atlas of ocean life built on OBIS, WoRMS and Wikidata.",
   "license": "MIT",

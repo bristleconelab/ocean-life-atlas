@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Ocean Life Atlas: who lives in this part of the sea?</title>
-  <meta name="description" content="Click anywhere in the ocean to see the animals and plants recorded there, with photos and plain names. Search any sea animal to see where it lives and how deep. Open data from OBIS, WoRMS and Wikidata.">
+  <meta name="description" content="Click anywhere in the ocean to see the animals and plants recorded there, with photos and plain names. Search any sea animal or sea to see where it lives, how deep, and how it migrates. Open data from OBIS, WoRMS, MiCO and Wikidata.">
   <meta name="theme-color" content="#0b2233">
   <link rel="canonical" href="https://oceanlife.bristleconelab.org/">
   <meta property="og:title" content="Ocean Life Atlas">
@@ -20,8 +20,8 @@
   <header class="topbar">
     <h1 class="brand">Ocean Life Atlas</h1>
     <div class="search" role="search">
-      <label for="search" class="visually-hidden">Find a sea animal</label>
-      <input id="search" type="search" autocomplete="off" spellcheck="false" placeholder="Find a sea animal: whale shark, octopus…"
+      <label for="search" class="visually-hidden">Find a sea animal or a place</label>
+      <input id="search" type="search" autocomplete="off" spellcheck="false" placeholder="Search sea life or a place"
         role="combobox" aria-expanded="false" aria-controls="hits" aria-autocomplete="list">
       <ul id="hits" role="listbox" hidden></ul>
       <p id="search-status" class="visually-hidden" aria-live="polite"></p>
@@ -32,46 +32,53 @@
 
   <div class="corner">
     <div id="legend" hidden>
-      <p class="legend-title">Sightings and samples per square</p>
+      <p class="legend-title">Records per 10,000 km²</p>
       <div class="ramp" aria-hidden="true"></div>
-      <div class="ramp-ticks" aria-hidden="true"><span>1</span><span>100</span><span>10,000</span><span>1 million</span></div>
+      <div class="ramp-ticks" aria-hidden="true"><span>1</span><span>30</span><span>1,000</span><span>30,000</span><span>1 million</span></div>
       <p id="legend-note" class="fine">Loading…</p>
     </div>
     <div class="corner-buttons">
       <button id="looked" class="btn" aria-pressed="false">Where scientists have looked</button>
+      <button id="near-me" class="btn ghost">Near me</button>
       <button id="migrations-open" class="btn ghost">Migrations</button>
       <button id="about-open" class="btn ghost">About</button>
     </div>
   </div>
 
   <aside id="panel" hidden aria-live="polite">
+    <button class="sheet-handle" aria-label="Resize the panel" role="slider" aria-valuemin="30" aria-valuemax="92" aria-valuenow="58" aria-orientation="vertical"></button>
     <button class="panel-close" aria-label="Close panel">×</button>
     <div class="panel-body"></div>
   </aside>
 
   <dialog id="migrations" aria-labelledby="migrations-title">
-    <button class="about-close" aria-label="Close">×</button>
-    <h2 id="migrations-title">Follow a migration</h2>
-    <p>Animals whose journeys have been pieced together from tracking and tagging studies (MiCO, Bentley et al. 2025). Pick one to see where it gathers, the routes between, and the tagged animals in OBIS.</p>
-    <ul class="mig-list"></ul>
+    <div class="mig-head">
+      <button class="about-close" aria-label="Close">×</button>
+      <h2 id="migrations-title">Follow a migration</h2>
+      <p>109 sea animals whose journeys have been pieced together from tracking and tagging studies (MiCO, Bentley et al. 2025). Pick one to see where it gathers, the links between those places, and the tagged animals in OBIS.</p>
+      <label for="mig-filter" class="visually-hidden">Filter the animals</label>
+      <input id="mig-filter" type="search" autocomplete="off" placeholder="Filter: turtle, albatross, Balaenoptera…">
+    </div>
+    <div class="mig-list"></div>
   </dialog>
 
   <dialog id="about" aria-labelledby="about-title">
     <button class="about-close" aria-label="Close">×</button>
     <h2 id="about-title">About this atlas</h2>
-    <p>Ocean Life Atlas shows what people have recorded living in the sea. Click a spot to see the species found within a square about 150 km across, or search for an animal to see where it has been seen and how deep it lives.</p>
-    <p>A list here is a record of what was found, not a census. Most of the ocean has hardly been sampled, so a short list usually means few people looked, not that little lives there. Switch on <em>Where scientists have looked</em> to see the gaps.</p>
+    <p>Ocean Life Atlas shows what people have recorded living in the sea. Click a spot to see the species found within a square about 150 km across, or search for an animal or a sea to see where it has been seen, how deep it lives and how it migrates.</p>
+    <p>A list here is a record of what was found, not a census. Most of the ocean has hardly been sampled, so a short list usually means few people looked, not that little lives there. Switch on <em>Where scientists have looked</em> to see the gaps. Records OBIS flags as lying on land (a museum specimen filed under a city, a river record) are left out everywhere, and so are species that live only on land or in fresh water.</p>
     <h3>Where the data comes from</h3>
     <ul class="sources">
       <li>Species records, ranges and depths: <a href="https://obis.org">OBIS</a>, the Ocean Biodiversity Information System (each dataset keeps its own licence, mostly CC BY or CC0).</li>
       <li>Names and search: <a href="https://www.marinespecies.org">World Register of Marine Species</a> (CC BY 4.0).</li>
       <li>Photos: <a href="https://commons.wikimedia.org">Wikimedia Commons</a>, credited on each photo; common names and links: <a href="https://www.wikidata.org">Wikidata</a> (CC0), queried through <a href="https://qlever.dev">QLever</a>.</li>
       <li>Summaries: <a href="https://en.wikipedia.org">Wikipedia</a> (CC BY-SA 4.0). Sea names: <a href="https://www.marineregions.org">Marine Regions</a> (CC BY 4.0).</li>
-      <li>Globe imagery: NASA Blue Marble through <a href="https://earthdata.nasa.gov/gibs">GIBS</a> (public domain).</li>
+      <li>Globe imagery: NASA Blue Marble through <a href="https://earthdata.nasa.gov/gibs">GIBS</a> (public domain). Borders and place names: <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL), tiles by <a href="https://openfreemap.org">OpenFreeMap</a>. Place search: Marine Regions gazetteer.</li>
       <li>Red List status: IUCN categories as provided by OBIS.</li>
       <li>Migration networks: <a href="https://doi.org/10.1038/s41467-025-59271-7">MiCO</a>, Bentley et al. (2025) Nature Communications, data <a href="https://doi.org/10.5281/zenodo.14873514">Zenodo</a> (CC0). Tagged-animal tracks: OBIS telemetry records (satellite and acoustic tags), credited per study on each species page.</li>
     </ul>
-    <p>Everything loads live from these services in your browser; this site has no server and keeps no data about you.</p>
+    <h3>Privacy</h3>
+    <p>This site has no server of its own, no cookies and no analytics. Your browser loads the data straight from the services above (OBIS, WoRMS, Wikidata and QLever, Wikimedia Commons, Wikipedia, Marine Regions, NASA GIBS and OpenFreeMap), so each of them sees your IP address and what you look up, as with any website. <em>Near me</em> uses your location only in your browser: what is sent to OBIS is the outline of the square, as for any click.</p>
     <p>Code: <a href="https://github.com/bristleconelab/ocean-life-atlas">github.com/bristleconelab/ocean-life-atlas</a> (MIT). Sister project: <a href="https://seaflooratlas.org">Seafloor Atlas</a>.</p>
   </dialog>
 

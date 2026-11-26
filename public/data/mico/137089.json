@@ -1,1 +1,1 @@
-{"common":"Bryde's Whale","scientific":"Balaenoptera edeni","sites":[[155.173,37.61,1,"Feeding"],[147.858,38,1,"Feeding"],[153.573,31.272,1,"Observation"],[164.773,24.035,1,"Observation"]],"routes":[[155.173,37.61,153.573,31.272,1,1],[147.858,38,164.773,24.035,1,1]]}
+{"common":"Bryde's Whale","scientific":"Balaenoptera edeni","group":"mammal","sites":[[155.173,37.61,1,"Feeding"],[147.858,38,1,"Feeding"],[153.573,31.272,1,"Observation"],[164.773,24.035,1,"Observation"]],"routes":[[155.173,37.61,153.573,31.272,1,0],[147.858,38,164.773,24.035,1,0]]}

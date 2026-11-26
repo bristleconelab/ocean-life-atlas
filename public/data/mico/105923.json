@@ -1,1 +1,1 @@
-{"common":"Spiny Dogfish","scientific":"Squalus acanthias","sites":[[-72.112,39.836,45,"Observation"],[-5.429,56.48,186,"Observation;Wintering"],[-64,40,3,"Observation"]],"routes":[[-64,40,-72.112,39.836,1,1],[-72.112,39.836,-64,40,3,3],[-64,40,-72.112,39.836,1,1],[-64,40,-72.112,39.836,1,1]]}
+{"common":"Spiny Dogfish","scientific":"Squalus acanthias","group":"fish","sites":[[-72.112,39.836,45,"Observation"],[-5.429,56.48,186,"Observation;Wintering"],[-64,40,3,"Observation"]],"routes":[[-72.112,39.836,-64,40,1,1]]}

@@ -35,11 +35,23 @@ export function mergeHits(worms: AphiaRecord[], obis: Completion[], query: strin
   return [...out.values()].sort((a, b) => score(a) - score(b) || a.scientificName.localeCompare(b.scientificName)).slice(0, limit);
 }
 
-/** Final order: exact common-name matches, then an exact scientific match, then species by how often OBIS has them
+/** The group most exact common-name matches belong to ("octopus" -> shells, squid and octopus), if any. */
+export function dominantGroup(hits: Hit[]): GroupId | null {
+  const n = new Map<GroupId, number>();
+  for (const h of hits) if (h.exact) n.set(h.group, (n.get(h.group) ?? 0) + 1);
+  let best: GroupId | null = null, max = 0;
+  for (const [g, k] of n) if (k > max) { best = g; max = k; }
+  return best;
+}
+
+/** Final order: exact common-name matches, then an exact scientific match, then species of the same kind as the exact
+ *  matches (so "octopus" lists octopuses before an "octopus coral"), then other species by how often OBIS has them
  *  recorded (a good proxy for "the one people mean"), then genera and families. */
 export function rankHits(hits: Hit[], records: Map<number, number>, query: string, limit = 8): Hit[] {
   const ql = query.trim().toLowerCase();
-  const tier = (h: Hit) => (h.exact ? 0 : h.scientificName.toLowerCase() === ql ? 1 : h.rank === 'Species' ? 2 : 3);
+  const dom = dominantGroup(hits);
+  const tier = (h: Hit) => (h.exact ? 0 : h.scientificName.toLowerCase() === ql ? 1
+    : h.rank === 'Species' ? (dom && h.group !== dom ? 3 : 2) : 4);
   return [...hits]
     .sort((a, b) => tier(a) - tier(b) || (records.get(b.id) ?? 0) - (records.get(a.id) ?? 0) || a.scientificName.localeCompare(b.scientificName))
     .slice(0, limit);
