@@ -31,10 +31,18 @@ export interface PanelHost {
   opened(open: boolean): void;
   /** Put the cursor in the search box, for picking a species to compare with. */
   focusSearch(placeholder: string): void;
+  /** Put the search box back to normal after a compare was started and then abandoned. */
+  resetSearch(): void;
   journeys: JourneyHost;
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+/** "lives up to 47 years", or months or days for short lives (never "0 years"). */
+export function lifespan(years: number): string {
+  if (years >= 1.5) return L(`lives up to ${fmt(Math.round(years))} years`, `${fmt(Math.round(years))} yilgacha yashaydi`);
+  if (years >= 1 / 12) { const m = Math.max(1, Math.round(years * 12)); return L(`lives up to ${m} month${m === 1 ? '' : 's'}`, `${m} oygacha yashaydi`); }
+  const d = Math.max(1, Math.round(years * 365.25)); return L(`lives up to ${d} day${d === 1 ? '' : 's'}`, `${d} kungacha yashaydi`);
+}
 
 export class Panel {
   private token = 0;
@@ -62,6 +70,7 @@ export class Panel {
   rememberPlace(lat: number, lon: number) { this.place = { lat, lon }; }
 
   close(writeHash = true) {
+    this.cancelCompare();
     this.token++;
     this.ctl.abort();
     this.runCleanups();
@@ -75,6 +84,8 @@ export class Panel {
   }
 
   private open(): { t: number; signal: AbortSignal } {
+    // any new view ends a compare the reader started but did not finish (showCompare reads it before this)
+    this.cancelCompare();
     this.ctl.abort();
     this.ctl = new AbortController();
     this.runCleanups();
@@ -425,7 +436,7 @@ export class Panel {
     const parts: string[] = [];
     if (tr.lengthM) parts.push(L(`up to ${formatLength(tr.lengthM)} long`, `uzunligi ${formatLength(tr.lengthM)} gacha`));
     if (tr.massKg) parts.push(L(`up to ${formatMass(tr.massKg)}`, `vazni ${formatMass(tr.massKg)} gacha`));
-    if (tr.lifeYears) parts.push(L(`lives up to ${fmt(Math.round(tr.lifeYears))} years`, `${fmt(Math.round(tr.lifeYears))} yilgacha yashaydi`));
+    if (tr.lifeYears) parts.push(lifespan(tr.lifeYears));
     if (!parts.length && !audio) return;
     box.hidden = false;
     box.append(h('h3', { text: L('Size and voice', 'Oʻlchami va ovozi') }));
@@ -493,6 +504,7 @@ export class Panel {
 
   /** Set by "Compare with another species": the next species picked in search is compared with this one. */
   comparingFrom: number | null = null;
+  private cancelCompare() { if (this.comparingFrom != null) { this.comparingFrom = null; this.host.resetSearch(); } }
 
   /** Two species side by side: names, photos, depth, temperature, records, and where their ranges meet. */
   async showCompare(a: number, b: number) {

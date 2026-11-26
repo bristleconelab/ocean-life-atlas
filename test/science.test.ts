@@ -57,3 +57,13 @@ describe('csv', () => {
     expect(toCsv([['a', 'b,c', 'say "hi"', null, 3]])).toBe('a,"b,c","say ""hi""",,3\r\n');
   });
 });
+
+describe('lifespan text', () => {
+  it('never says "0 years" for short lives', async () => {
+    const { lifespan } = await import('../src/panel');
+    expect(lifespan(47.5)).toBe('lives up to 48 years');
+    expect(lifespan(0.25)).toBe('lives up to 3 months');
+    expect(lifespan(1 / 52)).toBe('lives up to 7 days');
+    expect(lifespan(1 / 365.25)).toBe('lives up to 1 day');
+  });
+});

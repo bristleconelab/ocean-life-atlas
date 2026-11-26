@@ -17,6 +17,7 @@ const base = import.meta.env.BASE_URL;
 // static text in index.html carries its Uzbek in data-uz (text), data-uz-placeholder and data-uz-label (aria-label)
 if (lang === 'uz') {
   document.documentElement.lang = 'uz';
+  document.title = 'Ocean Life Atlas: dengizning bu qismida kim yashaydi?';
   document.querySelectorAll<HTMLElement>('[data-uz]').forEach((el) => { el.textContent = el.dataset.uz ?? ''; });
   document.querySelectorAll<HTMLInputElement>('[data-uz-placeholder]').forEach((el) => { el.placeholder = el.dataset.uzPlaceholder!; });
   document.querySelectorAll<HTMLElement>('[data-uz-label]').forEach((el) => el.setAttribute('aria-label', el.dataset.uzLabel!));
@@ -61,6 +62,10 @@ const panel = new Panel(panelEl, $('#panel .panel-body'), {
     dimRange: (d) => globe.dimRange(d),
     fitTo: (p) => globe.fitTo(p),
     base,
+  },
+  resetSearch: () => {
+    const input = $<HTMLInputElement>('#search');
+    input.placeholder = input.dataset[lang === 'uz' ? 'uzPlaceholder' : 'placeholder'] ?? input.placeholder;
   },
   focusSearch: (placeholder) => {
     const input = $<HTMLInputElement>('#search');

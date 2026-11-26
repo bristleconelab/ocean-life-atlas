@@ -381,3 +381,12 @@ body.panel-open .lang-switch { right: 472px; }
 .powered { display: flex; align-items: center; gap: 12px; margin: 18px 0 4px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; font-weight: 600; }
 .powered img { width: 48px; height: 48px; border-radius: 8px; }
 .powered small { display: block; font-weight: 400; color: var(--muted); }
+
+/* the open panel covers the right edge: keep the zoom buttons and the credits beside it */
+@media (min-width: 760px) { body.panel-open .maplibregl-ctrl-bottom-right { right: 460px; } }
+/* between phone and wide desktop, the language switch would sit on the search box when the panel is open */
+@media (min-width: 760px) and (max-width: 1099px) { body.panel-open .lang-switch { display: none; } }
+html[lang='uz'] .tile-photo[data-photo='none'] .tile-group::before { content: 'Hali surat yoʻq. '; }
+/* medium screens with the panel open: the expanded credits line would run under the corner buttons; keep it to the (i)
+   button (every source is also listed in About) */
+@media (min-width: 760px) and (max-width: 1099px) { body.panel-open .maplibregl-ctrl-attrib-inner { display: none; } }
