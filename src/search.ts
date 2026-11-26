@@ -7,7 +7,8 @@ import { commonsThumbs } from './wiki';
 import { silhouette } from './silhouettes';
 
 export function initSearch(input: HTMLInputElement, list: HTMLUListElement, status: HTMLElement, pick: (id: number) => void) {
-  let timer = 0, seq = 0, hits: Hit[] = [], cursor = -1;
+  // hitsFor: the query the current hits answer; Enter must not open a result left over from an earlier query
+  let timer = 0, seq = 0, hits: Hit[] = [], hitsFor = '', cursor = -1;
 
   const close = () => { list.hidden = true; cursor = -1; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); };
   const choose = (i: number) => {
@@ -38,6 +39,7 @@ export function initSearch(input: HTMLInputElement, list: HTMLUListElement, stat
     const counts = await api.obisRecordCounts(all.filter((x) => x.rank === 'Species').map((x) => x.id));
     if (my !== seq) return;
     hits = rankHits(all, counts, q);
+    hitsFor = q;
     const w = { status: [ex, p1, o].every((r) => r.status === 'rejected') ? 'rejected' : 'fulfilled' };
     list.replaceChildren();
     if (!hits.length) {
@@ -86,7 +88,7 @@ export function initSearch(input: HTMLInputElement, list: HTMLUListElement, stat
   input.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown' && hits.length) { e.preventDefault(); highlight(Math.min(cursor + 1, hits.length - 1)); }
     else if (e.key === 'ArrowUp' && hits.length) { e.preventDefault(); highlight(Math.max(cursor - 1, 0)); }
-    else if (e.key === 'Enter') { e.preventDefault(); choose(cursor >= 0 ? cursor : 0); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (hitsFor === input.value.trim()) choose(cursor >= 0 ? cursor : 0); }
     else if (e.key === 'Escape') { close(); input.blur(); }
   });
   input.addEventListener('blur', () => setTimeout(close, 120));
