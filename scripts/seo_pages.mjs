@@ -70,10 +70,14 @@ async function pool(items, n, fn) {
   return out;
 }
 const md5 = async (s) => (await import('node:crypto')).createHash('md5').update(s).digest('hex');
-async function thumb(file, w = 640) {
+/** Wikimedia keeps thumbnails at a few standard widths only (120/250/330/500/960/1280); others fail or are throttled. */
+async function thumb(file, w = 960) {
   const name = file.replace(/ /g, '_');
   const h = await md5(name);
-  return `https://upload.wikimedia.org/wikipedia/commons/thumb/${h[0]}/${h.slice(0, 2)}/${encodeURIComponent(name)}/${w}px-${encodeURIComponent(name)}`;
+  const cdn = `https://upload.wikimedia.org/wikipedia/commons/thumb/${h[0]}/${h.slice(0, 2)}/${encodeURIComponent(name)}/${w}px-${encodeURIComponent(name)}`;
+  // the CDN path fails for originals narrower than the width (400) and for some names; Special:FilePath copes with both
+  const ok = await fetch(cdn, { method: 'HEAD', headers: UA }).then((r) => r.ok).catch(() => false);
+  return ok ? cdn : `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(name)}?width=${w}`;
 }
 /** Middle 50 % of binned depth records (OBIS ladder: 10 m to 200, 100 m to 1,000, 1,000 m below). */
 function depthRange(bins) {
@@ -189,11 +193,13 @@ h2{font-size:24px;margin:36px 0 8px}.lede{font-size:19px}figure{margin:18px 0}fi
 table{border-collapse:collapse;width:100%;font-size:15px}td,th{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}td:last-child{font-weight:600}
 ul.grid{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}ul.grid a{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-decoration:none;color:var(--ink)}
 ul.grid small{display:block;color:var(--muted);font-style:italic}.crumbs{font-size:14px;color:var(--muted)}.crumbs a{color:var(--muted)}pre{white-space:pre-wrap;background:var(--panel);border-radius:10px;padding:12px;font-size:14px}
+header.top a.brand img{display:block;height:30px;width:auto}.by a{display:inline-flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;font-weight:600}.by img{border-radius:4px}
 footer{max-width:820px;margin:0 auto;padding:24px 16px 40px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}`;
 
 function page({ path, title, description, image, body, jsonld = [] }) {
   const url = `${SITE}${path}`;
   const img = image ?? `${SITE}/og-image.png`;
+  const imgSize = image ? '' : '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -202,21 +208,22 @@ function page({ path, title, description, image, body, jsonld = [] }) {
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="${url}">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230b2233'/%3E%3Cpath d='M6 18c4-5 9-6 14-3l5-3-1 5 1 5-5-3c-5 3-10 2-14-1z' fill='%23f2c94c'/%3E%3C/svg%3E">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest">
 <meta property="og:type" content="website"><meta property="og:site_name" content="Ocean Life Atlas">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}">
-<meta property="og:url" content="${url}"><meta property="og:image" content="${esc(img)}">
+<meta property="og:url" content="${url}"><meta property="og:image" content="${esc(img)}">${imgSize}
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b2233">
 <style>${CSS}</style>
 ${jsonld.map(ld).join('\n')}
 </head>
 <body>
-<header class="top"><a class="brand" href="/">Ocean Life Atlas</a><a class="cta" href="/">Open the 3D globe</a></header>
+<header class="top"><a class="brand" href="/"><img src="/brand/ocean-life-atlas-logo-dark.svg" alt="Ocean Life Atlas" width="133" height="30"></a><a class="cta" href="/">Open the 3D globe</a></header>
 <main>
 ${body}
 </main>
 <footer>
+<p class="by"><a href="https://bristleconelab.org"><img src="/brand/bristleconelab-mark-dark.svg" alt="" width="32" height="32">Powered by Bristlecone Lab</a></p>
 <p>Ocean Life Atlas is an independent, open-source project of <a href="https://bristleconelab.org">Bristlecone Lab</a>, built on open data from OBIS, WoRMS, Wikidata and MiCO. Numbers as of ${UPDATED}.</p>
 <p><a href="/">3D globe</a> · <a href="/species/">Sea animals</a> · <a href="/places/">Seas</a> · <a href="/about/">About &amp; FAQ</a> · <a href="${REPO}">Source code</a></p>
 </footer>
@@ -245,7 +252,7 @@ function speciesPage(s) {
   const body = `<p class="crumbs"><a href="/">Ocean Life Atlas</a> › <a href="/species/">Sea animals</a> › ${esc(s.common)}</p>
 <h1>${esc(s.common)}: where it lives</h1>
 <p class="sci">${esc(s.sci)}${s.uz ? ` · ${esc(s.uz)}` : ''}</p>
-${s.image ? `<figure><img src="${esc(s.image)}" alt="${esc(s.common)}" loading="lazy" width="640"><figcaption>Photo: <a href="https://commons.wikimedia.org/wiki/File:${encodeURIComponent(s.imageFile.replace(/ /g, '_'))}">Wikimedia Commons</a> (see the file page for author and licence)</figcaption></figure>` : ''}
+${s.image ? `<figure><img src="${esc(s.image)}" alt="${esc(s.common)}" width="960"><figcaption>Photo: <a href="https://commons.wikimedia.org/wiki/File:${encodeURIComponent(s.imageFile.replace(/ /g, '_'))}">Wikimedia Commons</a> (see the file page for author and licence)</figcaption></figure>` : ''}
 <p class="lede">${lede}</p>
 <p><a class="cta" href="/#sp=${s.id}">See its range on the 3D globe</a></p>
 <h2>Key facts</h2>

@@ -368,3 +368,16 @@ body.panel-open .lang-switch { right: 472px; }
 .ramp.complete { background: linear-gradient(90deg, #8e2f5a, #e07a5f 33%, #f2c94c 66%, #5fc0b0); }
 #legend { width: 290px; }
 #legend .mode button { font-size: 12px; padding: 4px 8px; }
+
+/* ---------- logo and the small Bristlecone Lab credit ---------- */
+.brand-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.brand img { display: block; height: 32px; width: auto; filter: drop-shadow(0 1px 8px rgb(0 0 0 / 0.45)); }
+.by { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 3px 7px; border-radius: 12px; background: rgb(11 34 51 / 0.62);
+  color: rgb(244 248 247 / 0.82); font-size: 12px; text-decoration: none; backdrop-filter: blur(6px); }
+.by img { width: 20px; height: 20px; border-radius: 4px; display: block; }
+.by:hover { color: var(--foam); background: rgb(11 34 51 / 0.85); }
+@media (max-width: 759px) { .brand img { height: 26px; } .by { font-size: 11px; } }
+
+.powered { display: flex; align-items: center; gap: 12px; margin: 18px 0 4px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; font-weight: 600; }
+.powered img { width: 48px; height: 48px; border-radius: 8px; }
+.powered small { display: block; font-weight: 400; color: var(--muted); }

@@ -1,3 +1,12 @@
+<p align="center">
+  <a href="https://oceanlife.bristleconelab.org">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="public/brand/ocean-life-atlas-logo-dark.svg">
+      <img src="public/brand/ocean-life-atlas-logo-light.svg" alt="Ocean Life Atlas" width="420">
+    </picture>
+  </a>
+</p>
+
 # Ocean Life Atlas
 
 **Click the sea, see who lives there.** An open, plain-language atlas of ocean life on a 3D globe.
@@ -179,3 +188,15 @@ Pages: Edit). Manual deploy: `npm run build && npx wrangler pages deploy dist
 
 [Seafloor Atlas](https://seaflooratlas.org): the same globe idea for the ocean floor, and how much of it has actually
 been measured.
+
+---
+
+<p align="center">
+  <a href="https://bristleconelab.org">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="public/brand/bristleconelab-mark-dark.svg">
+      <img src="public/brand/bristleconelab-mark-light.svg" alt="Bristlecone Lab" width="48" align="middle">
+    </picture>
+    Powered by <b>Bristlecone Lab</b>
+  </a>
+</p>
