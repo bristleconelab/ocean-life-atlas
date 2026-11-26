@@ -15,7 +15,7 @@
 
 <p align="center"><b><a href="https://oceanlife.bristleconelab.org">oceanlife.bristleconelab.org</a></b></p>
 
-<p align="center"><a href="https://oceanlife.bristleconelab.org/#at=-16.50,146.20"><img src="docs/img/life-here.png" alt="The Great Barrier Reef: 3,374 species with photos, names and Red List status" width="900"></a></p>
+<p align="center"><a href="https://oceanlife.bristleconelab.org/#at=-16.50,146.20"><img src="docs/img/hero.png" alt="The Great Barrier Reef: 3,374 species with photos, names and Red List status" width="900"></a></p>
 
 ## What you can do
 
